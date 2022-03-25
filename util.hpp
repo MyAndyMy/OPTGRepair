@@ -1,0 +1,185 @@
+//
+//  util.hpp
+//  OPTGRSRTR5.0
+//
+//  Created by Andy on 2022/3/14.
+//
+
+#include <vector>
+#include <string>
+#include <map>
+#include <unordered_map>
+using namespace std;
+
+#ifndef util_hpp
+#define util_hpp
+
+#include <stdio.h>
+
+extern double opt_f;
+extern int opt_r;
+
+extern "C" {
+ #include "glpk.h"
+}
+
+//所有编号均从1开始
+
+class Tuple{
+public:
+    size_t tuple_id;
+    vector<string> attrs_value;
+    string s_time;
+    string e_time;
+    double tuple_weight;
+    map<string,int> break_point;
+    int in_conflict;//in_conflict=1表示该元组参与冲突了
+    size_t source_id;
+    int x_star;
+    double x;
+    int xr;
+    Tuple():tuple_id(0),tuple_weight(0),in_conflict(0),source_id(0),x_star(0),x(0.0),xr(0){}
+    void print_all_info();
+};
+
+class Relationship{
+public:
+    pair<Tuple&,Tuple&> rel;
+    size_t rel_id;
+    double rel_weight;
+    int rel_type;
+    double y;
+    int yr;
+    Relationship(Tuple &t1, Tuple &t2):rel_id(0),rel_type(0),y(0.0),yr(0),rel(t1,t2){}
+    void print_all_info();
+};
+
+class FD{
+public:
+    vector<int> lhs;
+    vector<int> rhs;
+    size_t fd_id;
+    double fd_weight;
+    FD():fd_id(0),fd_weight(0){}
+    void print_all_info();
+};
+
+template <>
+struct std::hash<std::pair<int, int> > {
+public:
+        size_t operator()(std::pair<int, int> x) const throw() {
+             size_t h = 0;//something with x
+             return h;
+        }
+};
+
+class Element{
+public:
+    Tuple& t1;
+    Tuple& t2;
+    FD& fd;
+    int ele_id;
+    Element(Tuple &t1, Tuple &t2,FD &fd):t1(t1),t2(t2),fd(fd),ele_id(0){}
+};
+
+class Set1{
+public:
+    Tuple& t;
+    double set_weight;
+    vector<Element> element;
+    int set_type;//1是元组t的set
+    Set1(Tuple &t):t(t),set_weight(0.0),set_type(0){}
+};
+
+class Set2{
+public:
+    Tuple& t1;
+    Tuple& t2;
+    FD& fd;
+    double set_weight;
+    vector<Element> element;
+    int set_type;//2是三元组(t1,t2,f)的set
+    Set2(Tuple &t1, Tuple &t2,FD &fd):t1(t1),t2(t2),fd(fd),set_weight(0.0),set_type(0){}
+};
+
+class Generator{
+public:
+    vector<string> attrs_name;
+    vector<Tuple> source_tuple;
+    vector<FD> fun_denp;
+    vector<Tuple> normalized_tuple;
+    vector<Tuple> left_tuple;
+    unordered_map<pair<int,int>,double> for_weight;//relationship_S和relationship_G的冲突对weight是由for_weight来记录的
+    unordered_map<pair<int,int>,double> for_weight_soft;//relationship_S的冲突对weight是由for_weight来记录的
+    vector<Relationship> relationship_S;//1(冲突关系)/2（相邻关系）/3（association关系）
+    vector<Relationship> relationship_G;//1(冲突关系)/2（相邻关系）/3（association关系）
+    vector<Relationship> relationship_left;//留下的关系
+    
+    vector<Element> U;
+    vector<Set1> S1;
+    vector<Set2> S2;
+    
+    vector<int> UU;//for sc
+    vector<vector<int>> C;//for sc
+    
+    Generator():source_tuple(),normalized_tuple(),relationship_S(),relationship_G(){}
+    Generator(char* data_file_path, char* data_type);
+        //char* fd_file_path, char* conflict_file_path, char* associate_file_path
+    void load_source_data(char* data_file_path, char* data_type);
+    void load_fd_file(char* fd_file_path);
+    void load_tuple_weight(char* data_weight_file_path,vector<Tuple> &source_tuple);
+    void load_fd_weight(char* fd_weight_file_path,vector<FD> &fun_denp);
+    void load_conflict_file();//没写呢
+    void load_association_file();//没写呢
+    void construct_conflict(vector<Tuple> &tuple, vector<Relationship> &relationship,char* con_type);
+    void construct_left_conflict(vector<Tuple> &tuple, vector<Relationship> &relationship);
+    void print_attrs_name();
+    size_t number_of_tuples(vector<Tuple> &tuple);
+    void print_every_tuple(vector<Tuple> &tuple);
+    size_t number_of_fds();
+    void print_every_fds();
+    size_t number_of_tuples_in_conflict(vector<Tuple> &tuple);
+    size_t number_of_conflicts(vector<Relationship> relationship);
+    void print_every_rel(vector<Relationship> relationship);
+    void normalization1();
+    void Sort();
+    void construct_adjacency(vector<Tuple> &tuple, vector<Relationship> &relationship);
+    size_t number_of_adjacency(vector<Relationship> relationship);
+    size_t number_of_association(vector<Relationship> relationship);
+    void lp_solver_S_repair(vector<Tuple> &tuple, vector<Relationship> &relationship);
+    void lp_solver_G_repair(vector<Tuple> &tuple, vector<Relationship> &relationship);
+    /*
+     //  无xi+xj>=1
+     //  对yij的约束为：
+     //  w>0
+     //  yij<=xi+xj
+     //  w<0
+     //  yij>=xi
+     //  yij>=xj
+     //  没给association赋参数
+    */
+    void rounding(vector<Tuple> &tuple, vector<Relationship> &relationship);
+    double calculate_opt_f_G(vector<Tuple> &tuple,vector<Relationship> &relationship);
+    double calculate_opt_r_G(vector<Tuple> &tuple,vector<Relationship> &relationship);
+    double calculate_opt_f_S(vector<Tuple> &tuple);
+    double calculate_opt_r_S(vector<Tuple> &tuple);
+    bool effectiveness_of_solution_G(vector<Relationship> &relationship);
+    int span(vector<Tuple> &tuple);
+    void construct_left_tuple(vector<Tuple> &tuple);
+    void coalescing(vector<Tuple> &tuple);
+    double weighted_left_conflicts(vector<Relationship> &relationship);
+    
+    void construct_sets();//真elements和sets
+    void construct_sc();//将elements和sets构建成vector<int>和vector<vector<int>>
+    void print_all_info_sc();//打印真elements和sets
+    void print_all_info_sc_int();//打印vector<int>和vector<vector<int>>
+    
+    vector<int> v_difference(vector<int> &va, vector<int> &vb);
+    vector<int> v_intersection(vector<int> &va, vector<int> &vb);
+    int max_union(vector<int> U, vector<vector<int> > F);
+    vector<int> greedy_sc(vector<int> X, vector<vector<int> > F);
+    void clear_source_tuple();
+    double calculate_opt_r_Greedy();
+};
+
+#endif /* util_hpp */
