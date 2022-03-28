@@ -10,7 +10,7 @@
 #include <iostream>
 #include "util.hpp"
 #include <time.h>
-
+//
 vector<vector<int> > greedy_sc(vector<int> X, vector<vector<int> > F);//soft repair的贪心算法
 
 void temporal_db_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd_weight_path){
