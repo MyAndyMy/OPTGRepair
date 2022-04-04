@@ -1234,3 +1234,11 @@ void Generator::clear_source_tuple(){
     }
 }
 /*--------------------以上将所有source_tuple的x和xr置0----------------*/
+
+/*--------------------以下输出data的错误率----------------*/
+double Generator::print_error_percentage(vector<Tuple> &tuple){
+    size_t tuple_nums=tuple.size();
+    size_t error_nums=number_of_tuples_in_conflict(tuple);
+    return (double)error_nums/tuple_nums;
+}
+/*--------------------以上输出data的错误率----------------*/

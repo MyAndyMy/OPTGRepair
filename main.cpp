@@ -10,7 +10,7 @@
 #include <iostream>
 #include "util.hpp"
 #include <time.h>
-//
+
 vector<vector<int> > greedy_sc(vector<int> X, vector<vector<int> > F);//soft repair的贪心算法
 
 void temporal_db_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd_weight_path){
@@ -48,6 +48,7 @@ void temporal_db_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,c
     /*--------------------以下打印元组相关信息--------------------*/
     cout<<"分段前元组数量:"<<gen.number_of_tuples(gen.source_tuple)<<endl;
     cout<<"分段前元组中参与冲突的元组数量:"<<gen.number_of_tuples_in_conflict(gen.source_tuple)<<endl;
+    cout<<"分段前元组错误率:"<<gen.print_error_percentage(gen.source_tuple)<<endl;
     cout<<"分段前冲突对儿数量:"<<gen.number_of_conflicts(gen.relationship_S)<<endl;
     cout<<"分段前相邻对儿数量:"<<gen.number_of_adjacency(gen.relationship_S)<<endl;
     /*--------------------以上打印元组相关信息--------------------*/
@@ -95,6 +96,7 @@ void temporal_db_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,c
     end=clock();
     cout<<"normalization1后建立冲突元组对时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
     cout<<"normalization1后元组中参与冲突的元组数量:"<<gen.number_of_tuples_in_conflict(gen.normalized_tuple)<<endl;
+    cout<<"normalization1后元组错误率:"<<gen.print_error_percentage(gen.normalized_tuple)<<endl;
     cout<<"normalization1后冲突对儿数量:"<<gen.number_of_conflicts(gen.relationship_G)<<endl;
     cout<<"normalization1后相邻对儿数量:"<<gen.number_of_adjacency(gen.relationship_G)<<endl;
     /*--------------------以上normalization1--------------------*/
@@ -189,6 +191,7 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     cout<<"元组数量:"<<gen.number_of_tuples(gen.source_tuple)<<endl;
     cout<<"元组中参与冲突的元组数量:"<<gen.number_of_tuples_in_conflict(gen.source_tuple)<<endl;
     cout<<"冲突对儿数量:"<<gen.number_of_conflicts(gen.relationship_G)<<endl;
+    cout<<"元组错误率:"<<gen.print_error_percentage(gen.source_tuple)<<endl;
     /*--------------------以上打印元组相关信息--------------------*/
     
     cout<<endl;

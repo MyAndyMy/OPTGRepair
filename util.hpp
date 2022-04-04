@@ -180,6 +180,7 @@ public:
     vector<int> greedy_sc(vector<int> X, vector<vector<int> > F);
     void clear_source_tuple();
     double calculate_opt_r_Greedy();
+    double print_error_percentage(vector<Tuple> &tuple);
 };
 
 #endif /* util_hpp */
