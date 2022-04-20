@@ -13,7 +13,8 @@
 #include "limits.h"
 #include <unordered_map>
 #include "string.h"
-
+#include "stdlib.h"
+#include <algorithm>
 /*--------------------以下是预设权值--------------------*/
 double lambda = 2.3;
 double w_conflict=50000;
@@ -268,12 +269,14 @@ void Generator::load_fd_file(char* fd_file_path){
         fun_denp.push_back(temp_fd);
     }
 }
-template <class Type>
-Type stringToNum(const string& str){
-    istringstream iss(str);
-    Type num;
-    iss >> num;
-    return num;
+namespace std{
+    template <class Type>
+    Type stringToNum(const string& str){
+        istringstream iss(str);
+        Type num;
+        iss >> num;
+        return num;
+    }
 }
 void Generator::load_tuple_weight(char* data_weight_file_path,vector<Tuple> &tuple){
     //
@@ -309,7 +312,7 @@ void Generator::load_tuple_weight(char* data_weight_file_path,vector<Tuple> &tup
             string field;//属性值
             while(getline(sin, field, ','))
                 fields.push_back(field);
-            source_tuple[w_id].tuple_weight=stringToNum<double>(Trim(fields[0]));
+            source_tuple[w_id].tuple_weight=std::stringToNum<double>(Trim(fields[0]));
             w_id++;
         }
     }
@@ -343,7 +346,7 @@ void Generator::load_fd_weight(char* fd_weight_file_path,vector<FD> &fds){
             while (getline(sin, obj1, ',')){
                 objs1.push_back(obj1);
             }
-            fun_denp[fd_id].fd_weight=stringToNum<double>(Trim(objs1[0]));
+            fun_denp[fd_id].fd_weight=std::stringToNum<double>(Trim(objs1[0]));
             ++fd_id;
         }
     }
@@ -695,6 +698,8 @@ void Generator::normalization1(){//对每个冲突对暴力分段，for循环每
 /*--------------------以下为元组构建相邻对----------------*/
 void Generator::construct_adjacency(vector<Tuple> &tuple, vector<Relationship> &relationship){
     size_t adj_id=relationship.size();
+    if(tuple.size()==0){}
+    else{
     //cout<<"relationship.size() is"<<relationship.size()<<endl;
     for(int i=0;i<tuple.size()-1;++i){
         if(tuple[i].e_time==tuple[i+1].s_time&&tuple[i].source_id==tuple[i+1].source_id){
@@ -705,6 +710,7 @@ void Generator::construct_adjacency(vector<Tuple> &tuple, vector<Relationship> &
             temp_rel.rel_type=2;
             relationship.push_back(temp_rel);
         }
+    }
     }
 }
 /*--------------------以上为元组构建相邻对----------------*/
@@ -750,7 +756,11 @@ variables_columns:
 to_minimize:
     for (int i = 1; i <= tuples; i++) glp_set_obj_coef(lp, i, tuple[i-1].tuple_weight);//x
 constrant_matrix:
-    unsigned int size = conflicts*tuples;
+    long long size = conflicts*tuples;
+    if(size>500000000){
+        cout<<"size is too large!"<<endl;
+        exit(0);
+    }
     int *ia = new int[size + 1];
     int *ja = new int[size + 1];
     double *ar = new double[size + 1];
@@ -781,17 +791,18 @@ cleanup:
     glp_delete_prob(lp);
 }
 /*--------------------以上S-reoair----------------*/
-
 /*--------------------以下舍入分数最优解----------------*/
 void Generator::rounding(vector<Tuple> &tuple, vector<Relationship> &relationship){
     for(size_t i=0;i<tuple.size();++i){
         if(tuple[i].x==0.5){
+            cout<<"x有0.5"<<endl;
             tuple[i].xr=1;
         }
         else tuple[i].xr=tuple[i].x;
     }
     for(size_t i=0;i<relationship.size();++i){
         if(relationship[i].y==0.5){
+            cout<<"y有0.5"<<endl; 
             relationship[i].yr=1;
         }
         else relationship[i].yr=relationship[i].y;
@@ -853,17 +864,22 @@ void Generator::lp_solver_G_repair(vector<Tuple> &tuple, vector<Relationship> &r
     int conflicts = (int)number_of_conflicts(relationship);
     int adjacency = (int)number_of_adjacency(relationship);
 
+    cout<<"1"<<endl;
+
     /*---------------常规操作---------------*/
 initialize:
     glp_prob *lp;
     lp = glp_create_prob();
     glp_set_obj_dir(lp, GLP_MIN);
+    cout<<"2"<<endl;
 auxiliary_variables_rows:
     glp_add_rows(lp, conflicts+2*adjacency);//row是辅助变量
     for (int i = 1; i <= conflicts + 2*adjacency; i++) glp_set_row_bnds(lp, i, GLP_LO, 0.0, 0.0);
+    cout<<"3"<<endl;
 variables_columns:
     glp_add_cols(lp, tuples + conflicts + adjacency);//column是原有变量
     for (int i = 1; i <= tuples + conflicts + adjacency; i++) glp_set_col_bnds(lp, i, GLP_DB, 0.0, 1.0);//每个变量范围为[0，1]
+    cout<<"4"<<endl;
 to_minimize:
     for (int i = 1; i <= tuples; i++){
         glp_set_obj_coef(lp, i, tuple[i-1].tuple_weight);//x
@@ -873,14 +889,21 @@ to_minimize:
         //cout<<"adj"<<relationship_G[i-tuples-1].rel_weight<<endl;
     }
     for (int i = tuples + adjacency + 1; i <= tuples + conflicts + adjacency; i++){
-        glp_set_obj_coef(lp, i, -for_weight[make_pair(relationship_G[i-tuples-1].rel.first.tuple_id, relationship_G[i-tuples-1].rel.second.tuple_id)]);//y(conflict)
+        glp_set_obj_coef(lp, i, -relationship_G[i-tuples-1].rel_weight);
+        //glp_set_obj_coef(lp, i, -for_weight[make_pair(relationship_G[i-tuples-1].rel.first.tuple_id, relationship_G[i-tuples-1].rel.second.tuple_id)]);//y(conflict)
         //cout<<"con"<<for_weight[make_pair(relationship_G[i-tuples-1].rel.first.tuple_id, relationship_G[i-tuples-1].rel.second.tuple_id)]<<endl;
     }
+    cout<<"5"<<endl;
 constrant_matrix:
-    unsigned int size = (conflicts +  2 * adjacency)*(tuples + conflicts + adjacency);
-    int *ia = new int[size + 1];
-    int *ja = new int[size + 1];
-    double *ar = new double[size + 1];
+    long long size = (conflicts +  2 * adjacency)*(tuples + conflicts + adjacency);
+    if(size>500000000){
+        cout<<"size is too large!"<<endl;
+        exit(0);
+    }
+    int *ia = new int[size + 1]();
+    int *ja = new int[size + 1]();
+    double *ar = new double[size + 1]();
+    cout<<"6"<<endl;
     //yij-xi>=0
     for (int i = 1; i <= adjacency; i++) {//c是相邻对儿数，对于每对儿相邻元组，都有一个辅助变量
         for (int j = 1; j <= tuples + conflicts + adjacency; j++) {//a + b + c是原有变量个数
@@ -902,6 +925,7 @@ constrant_matrix:
             else ar[k] = 0.0;
         }
     }
+    cout<<"7"<<endl;
     //yij-xj>=0
     for (int i = adjacency+1; i <= 2*adjacency; i++) {//c是相邻对儿数，对于每对儿相邻元组，都有一个辅助变量
         for (int j = 1; j <= tuples + conflicts + adjacency; j++) {//a + b + c是原有变量个数
@@ -923,28 +947,40 @@ constrant_matrix:
             else ar[k] = 0.0;
         }
     }
+    cout<<"8"<<endl;
     //xi+xj-yij>=0 conflict
     for (int i = 2*adjacency+1; i <= conflicts+2*adjacency; i++) {
+        
         for (int j = 1; j <= tuples + conflicts + adjacency; j++) {//原有变量个数
+            
             int k = (i - 1)*(tuples + conflicts + adjacency) + j;
+            
             ia[k] = i;//第i个辅助变量
+            
             ja[k] = j;//第j个原有变量
+            //ar[k] = 0.0;
             if(j<=tuples){
                 if(relationship[i-adjacency-1].rel.first.tuple_id==tuple[j-1].tuple_id||relationship[i-adjacency-1].rel.second.tuple_id==tuple[j-1].tuple_id) ar[k] = 1.0;
                 else ar[k] = 0.0;
+                
             }
             else if(j>tuples&&j<=tuples + adjacency){
                 ar[k] = 0.0;
+                
             }
             else{
                 if(j-tuples-adjacency==i-2*adjacency) ar[k] = -1.0;
                 else ar[k] = 0.0;
+                
             }
         }
     }
+    cout<<"9"<<endl;
     glp_load_matrix(lp, size, ia, ja, ar);
+    cout<<"10"<<endl;
 calculate:
     glp_simplex(lp, NULL);
+    cout<<"11"<<endl;
 output:
     for (int i = 1; i <= (tuples + conflicts + adjacency); i++)
     {
@@ -962,12 +998,13 @@ output:
             //if(relationship[i-tuples-1].rel_type==2) cout<<"vec"<<endl;
         }
     }
+    cout<<"12"<<endl;
 cleanup:
     delete[] ia;
     delete[] ja;
     delete[] ar;
     glp_delete_prob(lp);
-    
+    cout<<"13"<<endl;
 }
 /*--------------------以上G-repair----------------*/
 
@@ -1132,9 +1169,9 @@ void Generator::print_all_info_sc_int(){
 vector<int> Generator::v_difference(vector<int> &va, vector<int> &vb) {
     vector<int> vc(va.size() + vb.size());
     vector<int>::iterator it;
-    sort(va.begin(), va.end());
-    sort(vb.begin(), vb.end());
-    it = set_difference(va.begin(), va.end(), vb.begin(), vb.end(), vc.begin());
+    std::sort(va.begin(), va.end());
+    std::sort(vb.begin(), vb.end());
+    it = std::set_difference(va.begin(), va.end(), vb.begin(), vb.end(), vc.begin());
     vc.resize(it - vc.begin());
     return vc;
 }
@@ -1142,9 +1179,9 @@ vector<int> Generator::v_difference(vector<int> &va, vector<int> &vb) {
 vector<int> Generator::v_intersection(vector<int> &va, vector<int> &vb) {
     vector<int> vc(va.size() + vb.size());
     vector<int>::iterator it;
-    sort(va.begin(), va.end());
-    sort(vb.begin(), vb.end());
-    it = set_intersection(va.begin(), va.end(), vb.begin(), vb.end(), vc.begin());
+    std::sort(va.begin(), va.end());
+    std::sort(vb.begin(), vb.end());
+    it = std::set_intersection(va.begin(), va.end(), vb.begin(), vb.end(), vc.begin());
     vc.resize(it - vc.begin());
     return vc;
 }
@@ -1196,8 +1233,10 @@ void Generator::construct_left_tuple(vector<Tuple> &tuple){
 
 /*--------------------以下对left_tuple做coalescing----------------*/
 void Generator::coalescing(vector<Tuple> &tuple){
+    if(tuple.size()==0){}
+    else{
     vector<Tuple>::iterator last=tuple.begin();
-    while(last!=tuple.end()){
+    while(last!=tuple.end()-1){
         vector<Tuple>::iterator next=last+1;
         if(last->e_time==next->s_time&&last->source_id==next->source_id){
             last->e_time=next->e_time;
@@ -1207,6 +1246,7 @@ void Generator::coalescing(vector<Tuple> &tuple){
         else{
             last++;
         }
+    }
     }
 }
 /*--------------------以上对left_tuple做coalescing----------------*/
@@ -1242,3 +1282,4 @@ double Generator::print_error_percentage(vector<Tuple> &tuple){
     return (double)error_nums/tuple_nums;
 }
 /*--------------------以上输出data的错误率----------------*/
+

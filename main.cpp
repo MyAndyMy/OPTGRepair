@@ -8,6 +8,7 @@
 
 
 #include <iostream>
+#include <fstream>
 #include "util.hpp"
 #include <time.h>
 
@@ -19,7 +20,7 @@ void temporal_db_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,c
     /*--------------------以下加载元组--------------------*/
     char ch[]="t";//标记为加载temporal data
     Generator gen(tuple_path,ch);//加载tuple到gen.source_data中
-    //gen.load_tuple_weight("",gen.source_tuple);//加载tuple's weight,当第一个参数为""时,默认每个元组的weight都是lambda
+    gen.load_tuple_weight("",gen.source_tuple);//加载tuple's weight,当第一个参数为""时,默认每个元组的weight都是lambda
     gen.load_tuple_weight(tuple_weight_path,gen.source_tuple);//加载tuple's weight到gen.source_data中
     gen.print_attrs_name();//输出temporal data的全部属性名称
     /*--------------------以上加载元组--------------------*/
@@ -28,7 +29,7 @@ void temporal_db_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,c
     
     /*--------------------以下加载FD--------------------*/
     gen.load_fd_file(fd_path);//加载FD到gen.fun_denp中
-    //gen.load_fd_weight("",gen.fun_denp);//加载fd's weight,当第一个参数为""时,默认每个元组的FD都是w_conflict
+    gen.load_fd_weight("",gen.fun_denp);//加载fd's weight,当第一个参数为""时,默认每个元组的FD都是w_conflict
     gen.load_fd_weight(fd_weight_path,gen.fun_denp);//加载fd's weight到gen.fun_denp中
     cout<<"FD数量:"<<gen.number_of_fds()<<endl;
     gen.print_every_fds();//输出全部FD
@@ -47,6 +48,24 @@ void temporal_db_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,c
     
     /*--------------------以下打印元组相关信息--------------------*/
     cout<<"分段前元组数量:"<<gen.number_of_tuples(gen.source_tuple)<<endl;
+    //以下输出元组size
+    ofstream output;
+    output.open("source_size&cost&NNorS.txt",ios::app);
+    if(!output){
+        cout<<"doesn't exist"<<endl;
+    }
+    else{
+        cout<<"exists"<<endl;
+    }
+    if(!output.is_open()){
+        cout<<"open fail"<<endl;
+    }
+    else{
+        cout<<"open success"<<endl;
+    }
+    output<<gen.number_of_tuples(gen.source_tuple)<<",";
+    output.close();
+    //以上输出元组size
     cout<<"分段前元组中参与冲突的元组数量:"<<gen.number_of_tuples_in_conflict(gen.source_tuple)<<endl;
     cout<<"分段前元组错误率:"<<gen.print_error_percentage(gen.source_tuple)<<endl;
     cout<<"分段前冲突对儿数量:"<<gen.number_of_conflicts(gen.relationship_S)<<endl;
@@ -66,14 +85,31 @@ void temporal_db_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,c
     cout<<"无normalization,S_repair的rounding时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
     cout<<"无normalization,S_repair的分数最优解为:"<<gen.calculate_opt_f_S(gen.source_tuple)<<endl;
     cout<<"无normalization,S_repair的整数近似最优解为:"<<gen.calculate_opt_r_S(gen.source_tuple)<<endl;
+    //以下输出cost
+    output.open("source_size&cost&NNorS.txt",ios::app);
+    if(!output){
+        cout<<"doesn't exist"<<endl;
+    }
+    else{
+        cout<<"exists"<<endl;
+    }
+    if(!output.is_open()){
+        cout<<"open fail"<<endl;
+    }
+    else{
+        cout<<"open success"<<endl;
+    }
+    output<<gen.calculate_opt_r_S(gen.source_tuple)<<endl;
+    output.close();
+    //以上输出cost
     gen.construct_left_tuple(gen.source_tuple);//把留在repair中的元组放到gen.left_tuple中
     cout<<"无normalization,S_repair,留下的元组个数:"<<gen.left_tuple.size()<<endl;
     gen.construct_adjacency(gen.left_tuple, gen.relationship_left);//建立gen.left_tuple中的相邻对到gen.relationship_left中
     cout<<"无normalization,S_repair,留下相邻对个数:"<<gen.number_of_adjacency(gen.relationship_left)<<endl;
     cout<<"无normalization,S_repair,留下相邻对个数/留下元组个数:"<<(double)gen.number_of_adjacency(gen.relationship_left)/gen.number_of_tuples(gen.left_tuple)<<endl;
     gen.coalescing(gen.left_tuple);//为gen.left_tuple中元组做coalescing操作
-    cout<<"normalization1后,S_repair,coalescing后,留下的元组个数:"<<gen.number_of_tuples(gen.left_tuple)<<endl;
-    cout<<"normalization1后,S_repair,coalescing后的span:"<<gen.span(gen.left_tuple)<<endl;
+    cout<<"无normalization,S_repair,coalescing后,留下的元组个数:"<<gen.number_of_tuples(gen.left_tuple)<<endl;
+    //cout<<"无normalization,S_repair,coalescing后的span:"<<gen.span(gen.left_tuple)<<endl;
     gen.left_tuple.clear();
     gen.relationship_left.clear();
     /*--------------------以上无normalization,S_repair--------------------*/
@@ -114,6 +150,23 @@ void temporal_db_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,c
     cout<<"normalization1后,S_repair的rounding时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
     cout<<"normalization1后,S_repair的分数最优解为:"<<gen.calculate_opt_f_S(gen.normalized_tuple)<<endl;
     cout<<"normalization1后,S_repair的整数近似最优解为:"<<gen.calculate_opt_r_S(gen.normalized_tuple)<<endl;
+    //以下输出cost
+    output.open("source_size&cost&NorS.txt",ios::app);
+    if(!output){
+        cout<<"doesn't exist"<<endl;
+    }
+    else{
+        cout<<"exists"<<endl;
+    }
+    if(!output.is_open()){
+        cout<<"open fail"<<endl;
+    }
+    else{
+        cout<<"open success"<<endl;
+    }
+    output<<gen.number_of_tuples(gen.source_tuple)<<","<<gen.calculate_opt_r_S(gen.normalized_tuple)<<endl;
+    output.close();
+    //以上输出cost
     gen.construct_left_tuple(gen.normalized_tuple);//把留在repair中的元组放到gen.left_tuple中
     cout<<"normalization1后,S_repair,留下的元组个数:"<<gen.number_of_tuples(gen.left_tuple)<<endl;
     gen.construct_adjacency(gen.left_tuple, gen.relationship_left);//建立gen.left_tuple中的相邻对到gen.relationship_left中
@@ -121,7 +174,7 @@ void temporal_db_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,c
     cout<<"normalization1后,S_repair,留下相邻对个数/留下元组个数:"<<(double)gen.number_of_adjacency(gen.relationship_left)/gen.number_of_tuples(gen.left_tuple)<<endl;
     gen.coalescing(gen.left_tuple);//为gen.left_tuple中元组做coalescing操作
     cout<<"normalization1后,S_repair,coalescing后,留下的元组个数:"<<gen.number_of_tuples(gen.left_tuple)<<endl;
-    cout<<"normalization1后,S_repair,coalescing后的span:"<<gen.span(gen.left_tuple)<<endl;
+    //cout<<"normalization1后,S_repair,coalescing后的span:"<<gen.span(gen.left_tuple)<<endl;
     gen.left_tuple.clear();
     gen.relationship_left.clear();
     /*--------------------以上normalization1，S-repair--------------------*/
@@ -142,6 +195,23 @@ void temporal_db_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,c
     cout<<"normalization1后,G_repair的rounding时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
     cout<<"normalization1后,G_repair的分数最优解为:"<<gen.calculate_opt_f_G(gen.normalized_tuple, gen.relationship_G)<<endl;
     cout<<"normalization1后,G_repair的整数近似最优解为:"<<gen.calculate_opt_r_G(gen.normalized_tuple, gen.relationship_G)<<endl;
+    //以下输出cost
+    output.open("source_size&cost&NorG.txt",ios::app);
+    if(!output){
+        cout<<"doesn't exist"<<endl;
+    }
+    else{
+        cout<<"exists"<<endl;
+    }
+    if(!output.is_open()){
+        cout<<"open fail"<<endl;
+    }
+    else{
+        cout<<"open success"<<endl;
+    }
+    output<<gen.number_of_tuples(gen.source_tuple)<<","<<gen.calculate_opt_r_G(gen.normalized_tuple, gen.relationship_G)<<endl;
+    output.close();
+    //以上输出cost
     gen.construct_left_tuple(gen.normalized_tuple);//把留在repair中的元组放到gen.left_tuple中
     cout<<"normalization1后,G_repair,留下的元组个数:"<<gen.number_of_tuples(gen.left_tuple)<<endl;
     gen.construct_adjacency(gen.left_tuple, gen.relationship_left);//建立gen.left_tuple中的相邻对到gen.relationship_left中
@@ -149,7 +219,7 @@ void temporal_db_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,c
     cout<<"normalization1后,G_repair,留下相邻对个数/留下元组个数:"<<(double)gen.number_of_adjacency(gen.relationship_left)/gen.number_of_tuples(gen.left_tuple)<<endl;
     gen.coalescing(gen.left_tuple);//为gen.left_tuple中元组做coalescing操作
     cout<<"normalization1后,G_repair,coalescing后,留下的元组个数:"<<gen.number_of_tuples(gen.left_tuple)<<endl;
-    cout<<"normalization1后,G_repair,coalescing后的span:"<<gen.span(gen.left_tuple)<<endl;
+    //cout<<"normalization1后,G_repair,coalescing后的span:"<<gen.span(gen.left_tuple)<<endl;
     gen.left_tuple.clear();
     gen.relationship_left.clear();
     /*--------------------以上normalization1，G-repair--------------------*/
@@ -264,20 +334,20 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
 
 int main(int argc, const char * argv[]) {
     cout<<"--------------------temporal db repair--------------------"<<endl;
-    char tem_tuple_path[]="/Users/andy/Documents/Data/Emp100jmy.csv";
-    char tem_tuple_weight_path[]="/Users/andy/Documents/Data/Emp100weight.csv";
-    char tem_fd_path[]="/Users/andy/Documents/Data/Emp_FDs.txt";
-    char tem_fd_weight_path[]="/Users/andy/Documents/Data/Emp_FDs_weight.txt";
+    char tem_tuple_path[]="/Users/andy/Documents/Data/Emp/Emp100jmy.csv";
+    char tem_tuple_weight_path[]="";
+    char tem_fd_path[]="/Users/andy/Documents/Data/Emp/Emp_FDs.txt";
+    char tem_fd_weight_path[]="/Users/andy/Documents/Data/Emp/Emp_FDs_weight.txt";
     temporal_db_repair(tem_tuple_path,tem_tuple_weight_path,tem_fd_path,tem_fd_weight_path);
     cout<<"--------------------temporal db repair--------------------"<<endl;
     
     cout<<endl;
     
     cout<<"--------------------soft repair--------------------"<<endl;
-    char rel_tuple_path[]="/Users/andy/Documents/Data/Hospital100.csv";
-    char rel_tuple_weight_path[]="/Users/andy/Documents/Data/Hospital100weight.csv";
-    char rel_fd_path[]="/Users/andy/Documents/Data/Hospital_FDs.txt";
-    char rel_fd_weight_path[]="/Users/andy/Documents/Data/Hospital_FDs_weight.txt";
+    char rel_tuple_path[]="/Users/andy/Documents/Data/Hosp/Hospital100.csv";
+    char rel_tuple_weight_path[]="";
+    char rel_fd_path[]="/Users/andy/Documents/Data/Hosp/Hospital_FDs.txt";
+    char rel_fd_weight_path[]="/Users/andy/Documents/Data/Hosp/Hospital_FDs_weight.txt";
     soft_repair(rel_tuple_path,rel_tuple_weight_path,rel_fd_path,rel_fd_weight_path);
     cout<<"--------------------soft repair--------------------"<<endl;
     

@@ -63,16 +63,16 @@ public:
     FD():fd_id(0),fd_weight(0){}
     void print_all_info();
 };
-
-template <>
-struct std::hash<std::pair<int, int> > {
-public:
-        size_t operator()(std::pair<int, int> x) const throw() {
-             size_t h = 0;//something with x
-             return h;
-        }
-};
-
+namespace std{
+    template <>
+    struct hash<std::pair<int, int> > {
+    public:
+            size_t operator()(pair<int, int> x) const throw() {
+                 size_t h = 0;//something with x
+                 return h;
+            }
+    };
+}
 class Element{
 public:
     Tuple& t1;
@@ -184,3 +184,4 @@ public:
 };
 
 #endif /* util_hpp */
+
