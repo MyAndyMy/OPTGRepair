@@ -235,8 +235,11 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     gen.load_tuple_weight(tuple_weight_path,gen.source_tuple);//加载tuple's weight到gen.source_data中
     gen.print_attrs_name();//输出relational data全部属性名称
     /*--------------------以上加载元组--------------------*/
-    
+    //for(int i=0;i<gen.source_tuple.size();++i) cout<<"attention:"<<gen.source_tuple[i].tuple_weight<<endl;
     cout<<endl;
+    //gen.pollute_flight(gen.source_tuple,10000,0.05);
+    //gen.random_tuple_weight(10000,0.05);
+    //gen.pollute(gen.source_tuple,10000,0.01);
     
     /*--------------------以下加载FD--------------------*/
     gen.load_fd_file(fd_path);//加载FD到gen.fun_denp
@@ -251,6 +254,7 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     /*--------------------以下构建原始元组的冲突对--------------------*/
     start=clock();
     gen.construct_conflict(gen.source_tuple,gen.relationship_G,ch);//将source_tuple的冲突对关系存储在relationship_G中
+    //gen.random_tuple_weight(gen.source_tuple);
     end=clock();
     cout<<"原始元组构建冲突对的时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
     /*--------------------以上构建原始元组的冲突对--------------------*/
@@ -297,6 +301,29 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     gen.construct_sets();
     end=clock();
     cout<<"构造set cover问题的输入U和S时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
+    
+    /*test
+    for(int i=0;i<gen.U.size();++i){
+        cout<<"test_elements:"<<gen.U[i].t1.tuple_id<<", "<<gen.U[i].t2.tuple_id<<", "<<gen.U[i].fd.fd_id<<endl;
+    }
+    for(int i=0;i<gen.S1.size();++i){
+        cout<<"test_set1:"<<gen.S1[i].t.tuple_id<<endl;
+        cout<<"test_set1_elements:";
+        for(int j=0;j<gen.S1[i].element.size();++j){
+            cout<<gen.S1[i].element[j].t1.tuple_id<<", "<<gen.S1[i].element[j].t2.tuple_id<<", "<<gen.S1[i].element[j].fd.fd_id<<", "<<", weight: "<<gen.S1[i].set_weight<<"----";
+        }
+        cout<<endl;
+    }
+    for(int i=0;i<gen.S2.size();++i){
+        cout<<"test_set2:"<<gen.S2[i].t1.tuple_id<<", "<<gen.S2[i].t2.tuple_id<<", "<<gen.S2[i].fd.fd_id<<endl;
+        cout<<"test_set2_elements:";
+        for(int j=0;j<gen.S2[i].element.size();++j){
+            cout<<gen.S2[i].element[j].t1.tuple_id<<", "<<gen.S2[i].element[j].t2.tuple_id<<", "<<gen.S2[i].element[j].fd.fd_id<<", weight: "<<gen.S2[i].set_weight<<"----";
+        }
+        cout<<endl;
+    }
+    test*/
+    
     //gen.print_all_info_sc();
     /*--------------------以上构造set cover问题的输入U和S1和S2----------------*/
     
@@ -304,6 +331,21 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     
     /*--------------------以下构造set cover问题的输入vector<int>和vector<vector<int>>----------------*/
     gen.construct_sc();
+    
+    /*test
+    for(int i=0;i<gen.UU.size();++i){
+        cout<<gen.UU[i]<<endl;
+    }
+    for(int i=0;i<gen.C.size();++i){
+        for(int j=0;j<gen.C[i].size();++j){
+            cout<<gen.C[i][j]<<endl;
+        }
+    }
+    for(int i=0;i<gen.weight_bef.size();++i){
+        cout<<"weight_bef:"<<gen.weight_bef[i].first<<endl;
+    }
+    test*/
+    
     //gen.print_all_info_sc_int();
     /*--------------------以上构造set cover问题的输入vector<int>和vector<vector<int>>----------------*/
     
@@ -316,16 +358,59 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     res=gen.greedy_sc(gen.UU,gen.C);
     end=clock();
     cout<<"soft repair的贪心算法时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
+    /*test
     for(int i=0;i<res.size();++i){
+        cout<<res[i]<<", ";
+    }
+    */
+    //cout<<"greedy cost:"<<gen.greedy_opt<<endl;
+    
+    //double bef0=0.0;
+    double bef1=0.0;
+    //double aft0=0.0;
+    double aft1=0.0;
+    int num_bef0=0;
+    int num_bef1=0;
+    int num_aft0=0;
+    int num_aft1=0;
+    for(int i=0;i<gen.weight_bef.size();++i){
+        if(gen.weight_bef[i].second==0){
+            num_bef0++;
+        }
+    }
+    for(int i=0;i<gen.weight_bef.size();++i){
+        if(gen.weight_bef[i].second==1){
+            num_bef1++;
+            bef1+=gen.weight_aft[i].second;
+        }
+    }
+    for(int i=0;i<gen.weight_aft.size();++i){
+        if(gen.weight_aft[i].second==0){
+            num_aft0++;
+        }
+    }
+    for(int i=0;i<gen.weight_aft.size();++i){
+        if(gen.weight_aft[i].second==1){
+            num_aft1++;
+            aft1+=gen.weight_aft[i].second;
+        }
+    }
+    cout<<"soft repair的贪心整数近似最优解为:"<<gen.greedy_opt<<endl;
+    cout<<"soft repair的贪心算法留下的元组个数:"<<num_aft0<<endl;
+    cout<<"soft repair的贪心算法留下的元组冲突对个数:"<<num_bef1-num_aft1<<endl;
+    cout<<"soft repair的贪心算法留下的元组冲突对加权和:"<<bef1-aft1<<endl;
+    /*test*/
+    /*for(int i=0;i<res.size();++i){
         if(res[i]>0&&res[i]<gen.S1.size()){
             gen.source_tuple[res[i]].xr=1;
         }
     }
-    cout<<"soft repair的贪心整数近似最优解为:"<<gen.calculate_opt_r_Greedy()<<endl;
+    cout<<"soft repair的贪心整数近似最优解为:"<<gen.greedy_opt<<endl;
+    //cout<<"soft repair的贪心整数近似最优解为:"<<gen.calculate_opt_r_Greedy()<<endl;
     cout<<"soft repair的贪心算法留下的元组个数:"<<gen.number_of_tuples(gen.left_tuple)<<endl;
     cout<<"soft repair的贪心算法留下的元组冲突对个数:"<<gen.number_of_conflicts(gen.relationship_S)<<endl;
     //没错,留下元组的冲突对放在relationship_S中了～！
-    cout<<"soft repair的贪心算法留下的元组冲突对加权和:"<<gen.weighted_left_conflicts(gen.relationship_S)<<endl;
+    cout<<"soft repair的贪心算法留下的元组冲突对加权和:"<<gen.weighted_left_conflicts(gen.relationship_S)<<endl;*/
     gen.left_tuple.clear();
     gen.relationship_left.clear();
     gen.relationship_S.clear();
@@ -338,20 +423,23 @@ int main(int argc, const char * argv[]) {
     char tem_tuple_weight_path[]="";
     char tem_fd_path[]="/Users/andy/Documents/Data/Emp/Emp_FDs.txt";
     char tem_fd_weight_path[]="/Users/andy/Documents/Data/Emp/Emp_FDs_weight.txt";
-    temporal_db_repair(tem_tuple_path,tem_tuple_weight_path,tem_fd_path,tem_fd_weight_path);
+    //temporal_db_repair(tem_tuple_path,tem_tuple_weight_path,tem_fd_path,tem_fd_weight_path);
     cout<<"--------------------temporal db repair--------------------"<<endl;
     
     cout<<endl;
     
+
     cout<<"--------------------soft repair--------------------"<<endl;
-    char rel_tuple_path[]="/Users/andy/Documents/Data/Hosp/Hospital100.csv";
-    char rel_tuple_weight_path[]="";
-    char rel_fd_path[]="/Users/andy/Documents/Data/Hosp/Hospital_FDs.txt";
-    char rel_fd_weight_path[]="/Users/andy/Documents/Data/Hosp/Hospital_FDs_weight.txt";
+    char rel_tuple_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight6.csv";
+    char rel_tuple_weight_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight6weight.txt";
+    char rel_fd_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight_FDs.txt";
+    char rel_fd_weight_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight_FDs_weight.txt";
     soft_repair(rel_tuple_path,rel_tuple_weight_path,rel_fd_path,rel_fd_weight_path);
     cout<<"--------------------soft repair--------------------"<<endl;
     
     return 0;
 }
+
+
 
 

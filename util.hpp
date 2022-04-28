@@ -121,6 +121,12 @@ public:
     
     vector<int> UU;//for sc
     vector<vector<int>> C;//for sc
+    //vector<int> weight;//for sc
+    
+    vector<pair<double,int>> weight_bef;//for sc
+    vector<pair<double,int>> weight_aft;//for sc
+    
+    double greedy_opt=0;//for sc
     
     Generator():source_tuple(),normalized_tuple(),relationship_S(),relationship_G(){}
     Generator(char* data_file_path, char* data_type);
@@ -176,12 +182,15 @@ public:
     
     vector<int> v_difference(vector<int> &va, vector<int> &vb);
     vector<int> v_intersection(vector<int> &va, vector<int> &vb);
-    int max_union(vector<int> U, vector<vector<int> > F);
-    vector<int> greedy_sc(vector<int> X, vector<vector<int> > F);
+    int max_union(vector<int> &U, vector<vector<int> > &F);
+    vector<int> greedy_sc(vector<int> &X, vector<vector<int> > &F);
     void clear_source_tuple();
     double calculate_opt_r_Greedy();
     double print_error_percentage(vector<Tuple> &tuple);
+    void pollute_flight(vector<Tuple> &tuple,int size,double err_rate);
+    //void random_tuple_weight(int size,double err_rate);
 };
 
 #endif /* util_hpp */
+
 

@@ -199,6 +199,8 @@ void Generator::load_source_data(char* data_file_path, char* data_type){
                     }
                 }
                 else if(!strcmp(data_type, "r")){
+                    //cout<<fields[i]<<endl;
+                    //cout<<Trim(fields[i])<<endl;
                     temp.attrs_value.push_back(Trim(fields[i]));
                     if(i==attrs_name.size()-2){
                         temp.s_time="-";
@@ -300,19 +302,21 @@ void Generator::load_tuple_weight(char* data_weight_file_path,vector<Tuple> &tup
             cout<<data_weight_file_path<<" open success"<<endl;
         }
         string line;
-        getline(fin, line);
-        istringstream sin(line);
-        vector<string> objs;
-        string obj;
-        while (getline(sin, obj, ',')){}
+        //getline(fin, line);
+        //istringstream sin(line);
+        //vector<string> objs;
+        //string obj;
+        //while (getline(sin, obj, ',')){}
+        //cout<<"in function:"<<endl;
         size_t w_id=0;//记录元组的tuple_id
         while (getline(fin, line)){
-            istringstream sin(line);
-            vector<string> fields;//所有属性值
-            string field;//属性值
-            while(getline(sin, field, ','))
-                fields.push_back(field);
-            source_tuple[w_id].tuple_weight=std::stringToNum<double>(Trim(fields[0]));
+            //istringstream sin(line);
+            //vector<string> fields;//所有属性值
+            //string field;//属性值
+            //while(getline(sin, field, ','))
+                //fields.push_back(field);
+            //cout<<"in function:"<<line<<endl;
+            source_tuple[w_id].tuple_weight=std::stringToNum<double>(Trim(line));
             w_id++;
         }
     }
@@ -795,14 +799,14 @@ cleanup:
 void Generator::rounding(vector<Tuple> &tuple, vector<Relationship> &relationship){
     for(size_t i=0;i<tuple.size();++i){
         if(tuple[i].x==0.5){
-            cout<<"x有0.5"<<endl;
+            //cout<<"x有0.5"<<endl;
             tuple[i].xr=1;
         }
         else tuple[i].xr=tuple[i].x;
     }
     for(size_t i=0;i<relationship.size();++i){
         if(relationship[i].y==0.5){
-            cout<<"y有0.5"<<endl; 
+            //cout<<"y有0.5"<<endl;
             relationship[i].yr=1;
         }
         else relationship[i].yr=relationship[i].y;
@@ -864,22 +868,17 @@ void Generator::lp_solver_G_repair(vector<Tuple> &tuple, vector<Relationship> &r
     int conflicts = (int)number_of_conflicts(relationship);
     int adjacency = (int)number_of_adjacency(relationship);
 
-    cout<<"1"<<endl;
-
     /*---------------常规操作---------------*/
 initialize:
     glp_prob *lp;
     lp = glp_create_prob();
     glp_set_obj_dir(lp, GLP_MIN);
-    cout<<"2"<<endl;
 auxiliary_variables_rows:
     glp_add_rows(lp, conflicts+2*adjacency);//row是辅助变量
     for (int i = 1; i <= conflicts + 2*adjacency; i++) glp_set_row_bnds(lp, i, GLP_LO, 0.0, 0.0);
-    cout<<"3"<<endl;
 variables_columns:
     glp_add_cols(lp, tuples + conflicts + adjacency);//column是原有变量
     for (int i = 1; i <= tuples + conflicts + adjacency; i++) glp_set_col_bnds(lp, i, GLP_DB, 0.0, 1.0);//每个变量范围为[0，1]
-    cout<<"4"<<endl;
 to_minimize:
     for (int i = 1; i <= tuples; i++){
         glp_set_obj_coef(lp, i, tuple[i-1].tuple_weight);//x
@@ -893,7 +892,6 @@ to_minimize:
         //glp_set_obj_coef(lp, i, -for_weight[make_pair(relationship_G[i-tuples-1].rel.first.tuple_id, relationship_G[i-tuples-1].rel.second.tuple_id)]);//y(conflict)
         //cout<<"con"<<for_weight[make_pair(relationship_G[i-tuples-1].rel.first.tuple_id, relationship_G[i-tuples-1].rel.second.tuple_id)]<<endl;
     }
-    cout<<"5"<<endl;
 constrant_matrix:
     long long size = (conflicts +  2 * adjacency)*(tuples + conflicts + adjacency);
     if(size>500000000){
@@ -903,7 +901,6 @@ constrant_matrix:
     int *ia = new int[size + 1]();
     int *ja = new int[size + 1]();
     double *ar = new double[size + 1]();
-    cout<<"6"<<endl;
     //yij-xi>=0
     for (int i = 1; i <= adjacency; i++) {//c是相邻对儿数，对于每对儿相邻元组，都有一个辅助变量
         for (int j = 1; j <= tuples + conflicts + adjacency; j++) {//a + b + c是原有变量个数
@@ -925,7 +922,6 @@ constrant_matrix:
             else ar[k] = 0.0;
         }
     }
-    cout<<"7"<<endl;
     //yij-xj>=0
     for (int i = adjacency+1; i <= 2*adjacency; i++) {//c是相邻对儿数，对于每对儿相邻元组，都有一个辅助变量
         for (int j = 1; j <= tuples + conflicts + adjacency; j++) {//a + b + c是原有变量个数
@@ -947,7 +943,6 @@ constrant_matrix:
             else ar[k] = 0.0;
         }
     }
-    cout<<"8"<<endl;
     //xi+xj-yij>=0 conflict
     for (int i = 2*adjacency+1; i <= conflicts+2*adjacency; i++) {
         
@@ -975,12 +970,9 @@ constrant_matrix:
             }
         }
     }
-    cout<<"9"<<endl;
     glp_load_matrix(lp, size, ia, ja, ar);
-    cout<<"10"<<endl;
 calculate:
     glp_simplex(lp, NULL);
-    cout<<"11"<<endl;
 output:
     for (int i = 1; i <= (tuples + conflicts + adjacency); i++)
     {
@@ -998,13 +990,11 @@ output:
             //if(relationship[i-tuples-1].rel_type==2) cout<<"vec"<<endl;
         }
     }
-    cout<<"12"<<endl;
 cleanup:
     delete[] ia;
     delete[] ja;
     delete[] ar;
     glp_delete_prob(lp);
-    cout<<"13"<<endl;
 }
 /*--------------------以上G-repair----------------*/
 
@@ -1067,6 +1057,7 @@ void Generator::construct_sets(){
         Set1 set1(source_tuple[i]);
         set1.set_type=1;
         set1.set_weight=source_tuple[i].tuple_weight;
+        //cout<<"tuple_weight:"<<source_tuple[i].tuple_weight<<endl;
         for(int j=0;j<U.size();++j){
             if(U[j].t1.tuple_id==source_tuple[i].tuple_id||U[j].t2.tuple_id==source_tuple[i].tuple_id){
                 set1.element.push_back(U[j]);
@@ -1089,6 +1080,7 @@ void Generator::construct_sets(){
         set2.set_type=2;
         set2.element.push_back(U[i]);
         set2.set_weight=U[i].fd.fd_weight;
+        //cout<<"U[i].fd.fd_weight:"<<U[i].fd.fd_weight<<endl;
         S2.push_back(set2);
     }
 }
@@ -1132,9 +1124,13 @@ void Generator::construct_sc(){
     for(int i=0;i<S1.size();++i){
         for(int j=0;j<S1[i].element.size();++j){
             temp.push_back(S1[i].element[j].ele_id);
+            //cout<<"constructing set1ing:"<<S1[i].element[j].ele_id<<endl;
         }
         C.push_back(temp);
         temp.clear();
+        weight_bef.push_back(make_pair(S1[i].set_weight, 0));
+        weight_aft.push_back(make_pair(S1[i].set_weight, 0));
+        //weight.push_back(S1[i].set_weight);
     }
     for(int i=0;i<S2.size();++i){
         for(int j=0;j<S2[i].element.size();++j){
@@ -1142,6 +1138,9 @@ void Generator::construct_sc(){
         }
         C.push_back(temp);
         temp.clear();
+        weight_bef.push_back(make_pair(S2[i].set_weight, 1));
+        weight_aft.push_back(make_pair(S2[i].set_weight, 1));
+        //weight.push_back(S2[i].set_weight);
     }
 }
 /*--------------------以上将elements和sets构建成vector<int>和vector<vector<int>>----------------*/
@@ -1185,38 +1184,91 @@ vector<int> Generator::v_intersection(vector<int> &va, vector<int> &vb) {
     vc.resize(it - vc.begin());
     return vc;
 }
-int Generator::max_union(vector<int> U, vector<vector<int> > F) {
-    int minsize = INT_MAX, index = 0;
+int Generator::max_union(vector<int> &U, vector<vector<int> > &F) {
+    double minsize = INT_MAX, index = 0;
+    /*cout<<"U=";
+    for(int i=0;i<U.size();++i) cout<<U[i]<<", ";
+    cout<<endl;
+    cout<<"F=";
+    for(int i=0;i<F.size();++i){
+        for(int j=0;j<F[i].size();++j){
+            cout<<F[i][j]<<", ";
+        }
+        cout<<endl;
+    }*/
     for (int i = 0; i < F.size(); i++) {
-        vector<int> uf = v_intersection(U, F[i]);
+        vector<int> uf = v_intersection(U, F[i]);//返回交集
+        //cout<<"i="<<i<<endl;
         if(uf.size()!=0){
+            //cout<<"交集的size:"<<uf.size()<<endl;
             size_t len=uf.size();
             if(len!=0){
                 double t = 0.0;
-                if(i<S1.size()){
+                /*if(i<S1.size()){
                     t=(double)S1[i].set_weight/len;
+                    cout<<"set的weight:"<<S1[i].set_weight<<endl;
+                    cout<<"S1[i].set_weight/len:"<<t<<endl;
+                    cout<<"minsize:"<<minsize<<endl;
                 }
-                if(i>=S1.size()&&i<S2.size()){
-                    t=(double)S2[i].set_weight/len;
-                }
+                if(i>=S1.size()&&i<S1.size()+S2.size()){
+                    t=(double)S2[i-S1.size()].set_weight/len;
+                    cout<<"set的weight:"<<S2[i-S1.size()].set_weight/len<<endl;
+                    cout<<"S2[i-S1.size()].set_weight/len:"<<t<<endl;
+                    cout<<"minsize:"<<minsize<<endl;
+                }*/
+                t=(double)weight_aft[i].first/len;
+                //cout<<"set的weight:"<<weight_aft[i].first<<endl;
+                //cout<<"eight_bef[i].first/len:"<<t<<endl;
+                //cout<<"minsize:"<<minsize<<endl;
                 if (t < minsize) {
+                    //cout<<"该换minsize了"<<endl;
                     minsize = t;
                     index = i;
+                    //cout<<"minsize:"<<minsize<<endl;
                 }
             }
         }
     }
+    //cout<<"max_union:"<<index<<endl;
     return index;
 }
-vector<int> Generator::greedy_sc(vector<int> X, vector<vector<int> > F) {
+vector<int> Generator::greedy_sc(vector<int> &X, vector<vector<int> > &F) {
     vector<int> U = X;
-    vector<int> C;
+    vector<int> C;//F[C[i]]是解
     while (U.size() != 0) {
         // std::cout << U.size() << std::endl;
-        int S = max_union(U, F);
-        U = v_difference(U, F[S]);
-        C.push_back(S);
+        int S = max_union(U, F);//F[S]和U的交集最大
+        U = v_difference(U, F[S]);//U把F[S]里的元素都剪减掉了
+        /*cout<<"v_difference:";
+        for(int i=0;i<U.size();++i){
+            cout<<U[i]<<", ";
+        }
+        cout<<endl;*/
+        
+        auto it=F.begin();
+        for(int i=0;i<S;++i){
+            it++;
+        }
+        F.erase(it);
+        greedy_opt=greedy_opt+weight_aft[S].first;
+        auto itt=weight_aft.begin();
+        for(int i=0;i<S;++i){
+            itt++;
+        }
+        weight_aft.erase(itt);
+        /*cout<<"把F输出看看:";
+        for(int i=0;i<F.size();++i){
+            for(int j=0;j<F[i].size();++j){
+                cout<<F[i][j]<<", ";
+            }
+            cout<<endl;
+        }
+        cout<<endl;*/
+
+        C.push_back(S);//F[S]以int S的方式记录在C中
+        
     }
+    
     return C;
 }
 /*--------------------以上是set cover问题的贪心算法----------------*/
@@ -1282,4 +1334,36 @@ double Generator::print_error_percentage(vector<Tuple> &tuple){
     return (double)error_nums/tuple_nums;
 }
 /*--------------------以上输出data的错误率----------------*/
+
+/*--------------------以下为元组赋随机weight----------------
+void Generator::random_tuple_weight(vector<Tuple> &tuple){
+    //FILE *fp;
+    //int nums=tuple.size();
+    //char result_file_name[]="/Users/andy/Documents/Data/Flight/flight";
+    //char postfix[]=".csv";
+    //char jmy[]="jmy";
+    //char middle[6];
+    //sprintf(middle,"%d",nums);
+    //strcat(result_file_name,middle);
+    //strcat(result_file_name,jmy);
+    //strcat(result_file_name,postfix);
+    //fp = fopen(result_file_name, "w");
+    int i=0;
+    for(i=0;i<tuple.size();++i){
+        if(tuple[i].in_conflict>0){
+            int j=rand();//生成随机数(0,3]
+            tuple[i].tuple_weight=j%3+1;
+            //fprintf(fp,"%d\n",j%(3+1));
+            //(rand () % (b-a))+ a + 1;
+        }
+        else if(tuple[i].in_conflict==0){
+            int j=rand();//生成随机数[7,10]
+            tuple[i].tuple_weight=j%4+7;
+            //fprintf(fp,"%d\n",j%4+7);
+            //(rand () % (b-a+1))+ a;
+        }
+    }
+    //fclose (fp);
+}
+--------------------以上为元组赋随机weight----------------*/
 
