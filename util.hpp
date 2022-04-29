@@ -102,6 +102,26 @@ public:
     Set2(Tuple &t1, Tuple &t2,FD &fd):t1(t1),t2(t2),fd(fd),set_weight(0.0),set_type(0){}
 };
 
+class SoftResult{
+public:
+    size_t nums_tuples;
+    size_t tuple_in_conflicts;
+    size_t nums_conflicts;
+    double error_rate;
+    double Grepair_time;
+    double Grepair_fopt;
+    double Grepair_ropt;
+    double Grepair_tleft;
+    double Grepair_cleft;
+    double Grepair_wcleft;
+    double Greedy_time;
+    double Greedy_ropt;
+    double Greedy_tleft;
+    double Greedy_cleft;
+    double Greedy_wcleft;
+    SoftResult():nums_tuples(0),tuple_in_conflicts(0),nums_conflicts(0),error_rate(0.0),Grepair_time(0.0),Grepair_fopt(0.0),Grepair_ropt(0.0),Grepair_tleft(0.0),Grepair_cleft(0.0),Grepair_wcleft(0.0),Greedy_time(0.0),Greedy_ropt(0.0),Greedy_tleft(0.0),Greedy_cleft(0.0),Greedy_wcleft(0.0){}
+};
+
 class Generator{
 public:
     vector<string> attrs_name;
@@ -127,6 +147,8 @@ public:
     vector<pair<double,int>> weight_aft;//for sc
     
     double greedy_opt=0;//for sc
+    
+    vector<SoftResult> SR;
     
     Generator():source_tuple(),normalized_tuple(),relationship_S(),relationship_G(){}
     Generator(char* data_file_path, char* data_type);
@@ -187,7 +209,8 @@ public:
     void clear_source_tuple();
     double calculate_opt_r_Greedy();
     double print_error_percentage(vector<Tuple> &tuple);
-    void pollute_flight(vector<Tuple> &tuple,int size,double err_rate);
+    void pollute_flight(vector<Tuple> &tuple,int size,double err_rate,string result_tuple_path,int nums_FD);
+    void write_soft_result(char* soft_repair_result_path);
     //void random_tuple_weight(int size,double err_rate);
 };
 

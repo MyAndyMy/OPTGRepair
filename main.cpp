@@ -225,9 +225,9 @@ void temporal_db_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,c
     /*--------------------以上normalization1，G-repair--------------------*/
     
 }
-void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd_weight_path){
+void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd_weight_path,char* result_path){
     clock_t start,end;//计算时间
-    
+    SoftResult temp_SR;
     /*--------------------以下加载元组--------------------*/
     char ch[]="r";
     Generator gen(tuple_path,ch);//加载tuple到gen.source_data中
@@ -237,9 +237,41 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     /*--------------------以上加载元组--------------------*/
     //for(int i=0;i<gen.source_tuple.size();++i) cout<<"attention:"<<gen.source_tuple[i].tuple_weight<<endl;
     cout<<endl;
-    //gen.pollute_flight(gen.source_tuple,10000,0.05);
-    //gen.random_tuple_weight(10000,0.05);
-    //gen.pollute(gen.source_tuple,10000,0.01);
+    
+    /*pollute_flight_data*/
+    int start_nums=10000;
+    int end_nums=40000;
+    while(start_nums<=end_nums){
+        gen.pollute_flight(gen.source_tuple,start_nums,0.05,"/Users/andy/Documents/Data/Flight/five_FDs/fli5ght",5);
+        start_nums=start_nums+2000;
+    }
+    
+    /*start_nums=10000;
+    while(start_nums<=end_nums){
+        gen.pollute_flight(gen.source_tuple,start_nums,0.05,"/Users/andy/Documents/Data/Flight/four_FDs/fli4ght",4);
+        start_nums=start_nums+2000;
+    }
+    
+    start_nums=10000;
+    while(start_nums<=end_nums){
+        gen.pollute_flight(gen.source_tuple,start_nums,0.05,"/Users/andy/Documents/Data/Flight/three_FDs/fli3ght",3);
+        start_nums=start_nums+2000;
+    }
+    
+    start_nums=10000;
+    while(start_nums<=end_nums){
+        gen.pollute_flight(gen.source_tuple,start_nums,0.05,"/Users/andy/Documents/Data/Flight/two_FDs/fli2ght",2);
+        start_nums=start_nums+2000;
+    }
+    
+    start_nums=10000;
+    while(start_nums<=end_nums){
+        gen.pollute_flight(gen.source_tuple,start_nums,0.05,"/Users/andy/Documents/Data/Flight/one_FD/fli1ght",1);
+        start_nums=start_nums+2000;
+    }*/
+    
+    //gen.pollute_flight(gen.source_tuple,10000,0.05,"/Users/andy/Documents/Data/Flight/five_FDs/",5);
+    /*pollute_flight_data*/
     
     /*--------------------以下加载FD--------------------*/
     gen.load_fd_file(fd_path);//加载FD到gen.fun_denp
@@ -263,9 +295,16 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     
     /*--------------------以下打印元组相关信息--------------------*/
     cout<<"元组数量:"<<gen.number_of_tuples(gen.source_tuple)<<endl;
+    temp_SR.nums_tuples=gen.number_of_tuples(gen.source_tuple);
+    //cout<<"temp_SR.nums_tuples:"<<temp_SR.nums_tuples<<endl;
     cout<<"元组中参与冲突的元组数量:"<<gen.number_of_tuples_in_conflict(gen.source_tuple)<<endl;
+    temp_SR.tuple_in_conflicts=gen.number_of_tuples_in_conflict(gen.source_tuple);
+    //cout<<"temp_SR.tuple_in_conflicts:"<<temp_SR.tuple_in_conflicts<<endl;
     cout<<"冲突对儿数量:"<<gen.number_of_conflicts(gen.relationship_G)<<endl;
+    temp_SR.nums_conflicts=gen.number_of_conflicts(gen.relationship_G);
+    //cout<<"temp_SR.nums_conflicts:"<<temp_SR.nums_conflicts<<endl;
     cout<<"元组错误率:"<<gen.print_error_percentage(gen.source_tuple)<<endl;
+    temp_SR.error_rate=gen.print_error_percentage(gen.source_tuple);
     /*--------------------以上打印元组相关信息--------------------*/
     
     cout<<endl;
@@ -275,6 +314,7 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     gen.lp_solver_G_repair(gen.source_tuple,gen.relationship_G);
     end=clock();
     cout<<"soft repair的G_repair的时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
+    temp_SR.Grepair_time=(double)(end - start)/CLOCKS_PER_SEC;
     if(gen.effectiveness_of_solution_G(gen.relationship_G)==true)
         cout<<"G_repair解有效,"<<"w>0时,y_i,j=min(xi+xj,1);w<0时,y_i,j=max(xi,xj)"<<endl;
     else cout<<"G_repair解无效"<<endl;
@@ -283,12 +323,17 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     end=clock();
     cout<<"soft repair的G_repair的rounding时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
     cout<<"soft repair的G_repair的分数最优解为:"<<gen.calculate_opt_f_G(gen.source_tuple, gen.relationship_G)<<endl;
+    temp_SR.Grepair_fopt=gen.calculate_opt_f_G(gen.source_tuple, gen.relationship_G);
     cout<<"soft repair的G_repair的整数近似最优解为:"<<gen.calculate_opt_r_G(gen.source_tuple, gen.relationship_G)<<endl;
+    temp_SR.Grepair_ropt=gen.calculate_opt_r_G(gen.source_tuple, gen.relationship_G);
     gen.construct_left_tuple(gen.source_tuple);//把留在repair中的元组放到gen.left_tuple中
     cout<<"soft repair的G_repair留下的元组个数:"<<gen.number_of_tuples(gen.left_tuple)<<endl;
     gen.construct_left_conflict(gen.left_tuple, gen.relationship_S);
+    temp_SR.Grepair_tleft=gen.number_of_tuples(gen.left_tuple);
     cout<<"soft repair的G_repair留下的元组冲突对个数:"<<gen.number_of_conflicts(gen.relationship_S)<<endl;
+    temp_SR.Grepair_cleft=gen.number_of_conflicts(gen.relationship_S);
     cout<<"soft repair的G_repair留下的元组冲突对加权和:"<<gen.weighted_left_conflicts(gen.relationship_S)<<endl;
+    temp_SR.Grepair_wcleft=gen.weighted_left_conflicts(gen.relationship_S);
     gen.left_tuple.clear();
     gen.relationship_left.clear();
     gen.relationship_S.clear();
@@ -358,6 +403,7 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     res=gen.greedy_sc(gen.UU,gen.C);
     end=clock();
     cout<<"soft repair的贪心算法时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
+    temp_SR.Greedy_time=(double)(end - start)/CLOCKS_PER_SEC;
     /*test
     for(int i=0;i<res.size();++i){
         cout<<res[i]<<", ";
@@ -381,7 +427,7 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     for(int i=0;i<gen.weight_bef.size();++i){
         if(gen.weight_bef[i].second==1){
             num_bef1++;
-            bef1+=gen.weight_aft[i].second;
+            bef1=bef1+gen.weight_bef[i].first;
         }
     }
     for(int i=0;i<gen.weight_aft.size();++i){
@@ -392,13 +438,21 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     for(int i=0;i<gen.weight_aft.size();++i){
         if(gen.weight_aft[i].second==1){
             num_aft1++;
-            aft1+=gen.weight_aft[i].second;
+            aft1+=gen.weight_aft[i].first;
         }
     }
+    
     cout<<"soft repair的贪心整数近似最优解为:"<<gen.greedy_opt<<endl;
+    temp_SR.Greedy_ropt=gen.greedy_opt;
     cout<<"soft repair的贪心算法留下的元组个数:"<<num_aft0<<endl;
+    temp_SR.Greedy_tleft=num_aft0;
     cout<<"soft repair的贪心算法留下的元组冲突对个数:"<<num_bef1-num_aft1<<endl;
+    temp_SR.Greedy_cleft=num_bef1-num_aft1;
     cout<<"soft repair的贪心算法留下的元组冲突对加权和:"<<bef1-aft1<<endl;
+    temp_SR.Greedy_wcleft=bef1-aft1;
+    gen.SR.push_back(temp_SR);
+    //cout<<"111h"<<bef1<<endl;
+    //cout<<"222h"<<aft1<<endl;
     /*test*/
     /*for(int i=0;i<res.size();++i){
         if(res[i]>0&&res[i]<gen.S1.size()){
@@ -414,8 +468,359 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     gen.left_tuple.clear();
     gen.relationship_left.clear();
     gen.relationship_S.clear();
+    
+    gen.write_soft_result(result_path);
     /*--------------------以上是set cover问题的贪心算法----------------*/
 }
+
+/*--------------------以下将soft_repair属性名称写到csv文件里----------------*/
+void write_soft_result_name(char* soft_repair_result_name_path){
+    //
+    FILE *fp;
+    fp = fopen(soft_repair_result_name_path, "w");
+    if(fp==NULL) cout<<"大失败！"<<endl;
+    else{
+        cout<<"大成功！"<<endl;
+        fprintf(fp,"%s,","nums_tuples");
+        fprintf(fp,"%s,","tuple_in_conflicts");
+        fprintf(fp,"%s,","nums_conflicts");
+        fprintf(fp,"%s,","error_rate");
+        fprintf(fp,"%s,","Grepair_time");
+        fprintf(fp,"%s,","Grepair_fopt");
+        fprintf(fp,"%s,","Grepair_ropt");
+        fprintf(fp,"%s,","Grepair_tleft");
+        fprintf(fp,"%s,","Grepair_cleft");
+        fprintf(fp,"%s,","Grepair_wcleft");
+        fprintf(fp,"%s,","Greedy_time");
+        fprintf(fp,"%s,","Greedy_ropt");
+        fprintf(fp,"%s,","Greedy_tleft");
+        fprintf(fp,"%s,","Greedy_cleft");
+        fprintf(fp,"%s\n","Greedy_wcleft");
+    }
+    fclose (fp);
+}
+/*--------------------以上将soft_repair属性名称写到csv文件里----------------*/
+
+/*--------------------以下在hadoop执行soft repair6FD----------------*/
+void soft_repair_6FDs_hadoop(int start,int end){
+    string rel_tuple_path="/home/hadoop/JMYAndy/Data/Flight/six_FDs/flight";
+    string rel_tuple_weight_path="/home/hadoop/JMYAndy/Data/Flight/six_FDs/flight";
+    char rel_fd_path[]="/home/hadoop/JMYAndy/Data/Flight/six_FDs/flight_FDs.txt";
+    char rel_fd_weight_path[]="/home/hadoop/JMYAndy/Data/Flight/six_FDs/flight_FDs_weight.txt";
+    char result_path[]="/home/hadoop/JMYAndy/Data/results/result_6FD.csv";
+    
+    write_soft_result_name(result_path);
+    
+    int nums=start;
+    string post="jmy0.050000.csv";
+    string weight_post="jmy0.050000weight.txt";
+    
+    while(nums<=end){
+        string middle=to_string(nums);
+        rel_tuple_path=rel_tuple_path+middle+post;
+        //cout<<"xixi:"<<rel_tuple_path<<endl;
+        
+        rel_tuple_weight_path=rel_tuple_weight_path+middle+weight_post;
+        //cout<<"xixi:"<<rel_tuple_weight_path<<endl;
+        
+        nums=nums+2000;
+
+
+        //char ch1[100];
+        //char ch2[100];
+        //strcpy(ch1,rel_tuple_path.c_str());
+        //strcpy(ch2,rel_tuple_weight_path.c_str());
+        char c1[68];//6FD和5FD是不一样的喔！！！
+        char c2[74];//6FD和5FD是不一样的喔！！！
+        int i=0;
+        for(i=0;i<rel_tuple_path.size();++i){
+            c1[i]=rel_tuple_path[i];
+        }
+        c1[i]='\0';
+
+        i=0;
+        for(i=0;i<rel_tuple_weight_path.size();++i){
+            c2[i]=rel_tuple_weight_path[i];
+        }
+        c2[i]='\0';
+        //soft_repair(rel_tuple_path.c_str(),rel_tuple_weight_path.c_str(),rel_fd_path,rel_fd_weight_path,result_path);
+        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path);
+        
+        
+        rel_tuple_path.erase(47, 20);
+        rel_tuple_weight_path.erase(47, 26);
+    }
+}
+/*--------------------以上在hadoop执行soft repair6FD----------------*/
+
+/*--------------------以下在hadoop执行soft repair5FD----------------*/
+void soft_repair_5FDs_hadoop(int start,int end){
+    string rel_tuple_path="/home/hadoop/JMYAndy/Data/Flight/five_FDs/fli5ght";
+    string rel_tuple_weight_path="/home/hadoop/JMYAndy/Data/Flight/five_FDs/fli5ght";
+    char rel_fd_path[]="/home/hadoop/JMYAndy/Data/Flight/five_FDs/flight_FDs5.txt";
+    char rel_fd_weight_path[]="/home/hadoop/JMYAndy/Data/Flight/five_FDs/flight_FDs_weight5.txt";
+    char result_path[]="/home/hadoop/JMYAndy/Data/results/result_5FD.csv";
+    
+    write_soft_result_name(result_path);
+    
+    int nums=start;
+    string post="jmy0.050000.csv";
+    string weight_post="jmy0.050000weight.txt";
+    
+    while(nums<=end){
+        string middle=to_string(nums);
+        rel_tuple_path=rel_tuple_path+middle+post;
+        //cout<<"xixi:"<<rel_tuple_path<<endl;
+        
+        rel_tuple_weight_path=rel_tuple_weight_path+middle+weight_post;
+        //cout<<"xixi:"<<rel_tuple_weight_path<<endl;
+        
+        nums=nums+2000;
+
+
+        //char ch1[100];
+        //char ch2[100];
+        //strcpy(ch1,rel_tuple_path.c_str());
+        //strcpy(ch2,rel_tuple_weight_path.c_str());
+        char c1[70];//6FD和5FD是不一样的喔！！！
+        char c2[76];//6FD和5FD是不一样的喔！！！
+        int i=0;
+        for(i=0;i<rel_tuple_path.size();++i){
+            c1[i]=rel_tuple_path[i];
+        }
+        c1[i]='\0';
+
+        i=0;
+        for(i=0;i<rel_tuple_weight_path.size();++i){
+            c2[i]=rel_tuple_weight_path[i];
+        }
+        c2[i]='\0';
+        //soft_repair(rel_tuple_path.c_str(),rel_tuple_weight_path.c_str(),rel_fd_path,rel_fd_weight_path,result_path);
+        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path);
+        
+        //cout<<"xixi:"<<c1<<endl;
+        //cout<<"xixi:"<<c2<<endl;
+        rel_tuple_path.erase(49, 20);
+        rel_tuple_weight_path.erase(48, 26);
+    }
+}
+/*--------------------以上在hadoop执行soft repair5FD----------------*/
+
+/*--------------------以下在hadoop执行soft repair4FD----------------*/
+void soft_repair_4FDs_hadoop(int start,int end){
+    string rel_tuple_path="/home/hadoop/JMYAndy/Data/Flight/four_FDs/fli4ght";
+    string rel_tuple_weight_path="/home/hadoop/JMYAndy/Data/Flight/four_FDs/fli4ght";
+    char rel_fd_path[]="/home/hadoop/JMYAndy/Data/Flight/four_FDs/flight_FDs4.txt";
+    char rel_fd_weight_path[]="/home/hadoop/JMYAndy/Data/Flight/four_FDs/flight_FDs_weight4.txt";
+    char result_path[]="/home/hadoop/JMYAndy/Data/results/result_4FD.csv";
+    
+    write_soft_result_name(result_path);
+    
+    int nums=start;
+    string post="jmy0.050000.csv";
+    string weight_post="jmy0.050000weight.txt";
+    
+    while(nums<=end){
+        string middle=to_string(nums);
+        rel_tuple_path=rel_tuple_path+middle+post;
+        //cout<<"xixi:"<<rel_tuple_path<<endl;
+        
+        rel_tuple_weight_path=rel_tuple_weight_path+middle+weight_post;
+        //cout<<"xixi:"<<rel_tuple_weight_path<<endl;
+        
+        nums=nums+2000;
+
+
+        //char ch1[100];
+        //char ch2[100];
+        //strcpy(ch1,rel_tuple_path.c_str());
+        //strcpy(ch2,rel_tuple_weight_path.c_str());
+        char c1[70];//6FD和5FD是不一样的喔！！！
+        char c2[76];//6FD和5FD是不一样的喔！！！
+        int i=0;
+        for(i=0;i<rel_tuple_path.size();++i){
+            c1[i]=rel_tuple_path[i];
+        }
+        c1[i]='\0';
+
+        i=0;
+        for(i=0;i<rel_tuple_weight_path.size();++i){
+            c2[i]=rel_tuple_weight_path[i];
+        }
+        c2[i]='\0';
+        //soft_repair(rel_tuple_path.c_str(),rel_tuple_weight_path.c_str(),rel_fd_path,rel_fd_weight_path,result_path);
+        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path);
+        
+        //cout<<"xixi:"<<c1<<endl;
+        //cout<<"xixi:"<<c2<<endl;
+        
+        rel_tuple_path.erase(49, 20);
+        rel_tuple_weight_path.erase(48, 26);
+    }
+}
+/*--------------------以上在hadoop执行soft repair4FD----------------*/
+
+/*--------------------以下在hadoop执行soft repair3FD----------------*/
+void soft_repair_3FDs_hadoop(int start,int end){
+    string rel_tuple_path="/home/hadoop/JMYAndy/Data/Flight/three_FDs/fli3ght";
+    string rel_tuple_weight_path="/home/hadoop/JMYAndy/Data/Flight/three_FDs/fli3ght";
+    char rel_fd_path[]="/home/hadoop/JMYAndy/Data/Flight/three_FDs/flight_FDs3.txt";
+    char rel_fd_weight_path[]="/home/hadoop/JMYAndy/Data/Flight/three_FDs/flight_FDs_weight3.txt";
+    char result_path[]="/home/hadoop/JMYAndy/Data/results/result_3FD.csv";
+    
+    write_soft_result_name(result_path);
+    
+    int nums=start;
+    string post="jmy0.050000.csv";
+    string weight_post="jmy0.050000weight.txt";
+    
+    while(nums<=end){
+        string middle=to_string(nums);
+        rel_tuple_path=rel_tuple_path+middle+post;
+        //cout<<"xixi:"<<rel_tuple_path<<endl;
+        
+        rel_tuple_weight_path=rel_tuple_weight_path+middle+weight_post;
+        //cout<<"xixi:"<<rel_tuple_weight_path<<endl;
+        
+        nums=nums+2000;
+
+
+        //char ch1[100];
+        //char ch2[100];
+        //strcpy(ch1,rel_tuple_path.c_str());
+        //strcpy(ch2,rel_tuple_weight_path.c_str());
+        char c1[71];//6FD和5FD是不一样的喔！！！
+        char c2[77];//6FD和5FD是不一样的喔！！！
+        int i=0;
+        for(i=0;i<rel_tuple_path.size();++i){
+            c1[i]=rel_tuple_path[i];
+        }
+        c1[i]='\0';
+
+        i=0;
+        for(i=0;i<rel_tuple_weight_path.size();++i){
+            c2[i]=rel_tuple_weight_path[i];
+        }
+        c2[i]='\0';
+        //soft_repair(rel_tuple_path.c_str(),rel_tuple_weight_path.c_str(),rel_fd_path,rel_fd_weight_path,result_path);
+        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path);
+        
+        //cout<<"xixi:"<<c1<<endl;
+        //cout<<"xixi:"<<c2<<endl;
+        
+        rel_tuple_path.erase(50, 20);
+        rel_tuple_weight_path.erase(49, 26);
+    }
+}
+/*--------------------以上在hadoop执行soft repair3FD----------------*/
+
+/*--------------------以下在hadoop执行soft repair2FD----------------*/
+void soft_repair_2FDs_hadoop(int start,int end){
+    string rel_tuple_path="/home/hadoop/JMYAndy/Data/Flight/two_FDs/fli2ght";
+    string rel_tuple_weight_path="/home/hadoop/JMYAndy/Data/Flight/two_FDs/fli2ght";
+    char rel_fd_path[]="/home/hadoop/JMYAndy/Data/Flight/two_FDs/flight_FDs2.txt";
+    char rel_fd_weight_path[]="/home/hadoop/JMYAndy/Data/Flight/two_FDs/flight_FDs_weight2.txt";
+    char result_path[]="/home/hadoop/JMYAndy/Data/results/result_2FD.csv";
+    
+    write_soft_result_name(result_path);
+    
+    int nums=start;
+    string post="jmy0.050000.csv";
+    string weight_post="jmy0.050000weight.txt";
+    
+    while(nums<=end){
+        string middle=to_string(nums);
+        rel_tuple_path=rel_tuple_path+middle+post;
+        //cout<<"xixi:"<<rel_tuple_path<<endl;
+        
+        rel_tuple_weight_path=rel_tuple_weight_path+middle+weight_post;
+        //cout<<"xixi:"<<rel_tuple_weight_path<<endl;
+        
+        nums=nums+2000;
+
+
+        //char ch1[100];
+        //char ch2[100];
+        //strcpy(ch1,rel_tuple_path.c_str());
+        //strcpy(ch2,rel_tuple_weight_path.c_str());
+        char c1[69];//6FD和5FD是不一样的喔！！！
+        char c2[75];//6FD和5FD是不一样的喔！！！
+        int i=0;
+        for(i=0;i<rel_tuple_path.size();++i){
+            c1[i]=rel_tuple_path[i];
+        }
+        c1[i]='\0';
+
+        i=0;
+        for(i=0;i<rel_tuple_weight_path.size();++i){
+            c2[i]=rel_tuple_weight_path[i];
+        }
+        c2[i]='\0';
+        //soft_repair(rel_tuple_path.c_str(),rel_tuple_weight_path.c_str(),rel_fd_path,rel_fd_weight_path,result_path);
+        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path);
+        
+        //cout<<"xixi:"<<c1<<endl;
+        //cout<<"xixi:"<<c2<<endl;
+        
+        rel_tuple_path.erase(48, 20);
+        rel_tuple_weight_path.erase(47, 26);
+    }
+}
+/*--------------------以上在hadoop执行soft repair2FD----------------*/
+
+/*--------------------以下在hadoop执行soft repair1FD----------------*/
+void soft_repair_1FDs_hadoop(int start,int end){
+    string rel_tuple_path="/home/hadoop/JMYAndy/Data/Flight/one_FD/fli1ght";
+    string rel_tuple_weight_path="/home/hadoop/JMYAndy/Data/Flight/one_FD/fli1ght";
+    char rel_fd_path[]="/home/hadoop/JMYAndy/Data/Flight/one_FDs/flight_FDs1.txt";
+    char rel_fd_weight_path[]="/home/hadoop/JMYAndy/Data/Flight/one_FD/flight_FDs_weight1.txt";
+    char result_path[]="/home/hadoop/JMYAndy/Data/results/result_1FD.csv";
+    
+    write_soft_result_name(result_path);
+    
+    int nums=start;
+    string post="jmy0.050000.csv";
+    string weight_post="jmy0.050000weight.txt";
+    
+    while(nums<=end){
+        string middle=to_string(nums);
+        rel_tuple_path=rel_tuple_path+middle+post;
+        //cout<<"xixi:"<<rel_tuple_path<<endl;
+        
+        rel_tuple_weight_path=rel_tuple_weight_path+middle+weight_post;
+        //cout<<"xixi:"<<rel_tuple_weight_path<<endl;
+        
+        nums=nums+2000;
+
+
+        //char ch1[100];
+        //char ch2[100];
+        //strcpy(ch1,rel_tuple_path.c_str());
+        //strcpy(ch2,rel_tuple_weight_path.c_str());
+        char c1[68];//6FD和5FD是不一样的喔！！！
+        char c2[74];//6FD和5FD是不一样的喔！！！
+        int i=0;
+        for(i=0;i<rel_tuple_path.size();++i){
+            c1[i]=rel_tuple_path[i];
+        }
+        c1[i]='\0';
+
+        i=0;
+        for(i=0;i<rel_tuple_weight_path.size();++i){
+            c2[i]=rel_tuple_weight_path[i];
+        }
+        c2[i]='\0';
+        //soft_repair(rel_tuple_path.c_str(),rel_tuple_weight_path.c_str(),rel_fd_path,rel_fd_weight_path,result_path);
+        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path);
+        
+        //cout<<"xixi:"<<c1<<endl;
+        //cout<<"xixi:"<<c2<<endl;
+        
+        rel_tuple_path.erase(47, 20);
+        rel_tuple_weight_path.erase(46, 26);
+    }
+}
+/*--------------------以上在hadoop执行soft repair2FD----------------*/
 
 int main(int argc, const char * argv[]) {
     cout<<"--------------------temporal db repair--------------------"<<endl;
@@ -427,15 +832,38 @@ int main(int argc, const char * argv[]) {
     cout<<"--------------------temporal db repair--------------------"<<endl;
     
     cout<<endl;
-    
 
-    cout<<"--------------------soft repair--------------------"<<endl;
+    //soft_repair_6FDs_hadoop(10000,40000);
+    //soft_repair_1FDs_hadoop(10000,14000);
+    /*cout<<"--------------------test_data--------------------"<<endl;
     char rel_tuple_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight6.csv";
     char rel_tuple_weight_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight6weight.txt";
     char rel_fd_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight_FDs.txt";
     char rel_fd_weight_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight_FDs_weight.txt";
-    soft_repair(rel_tuple_path,rel_tuple_weight_path,rel_fd_path,rel_fd_weight_path);
-    cout<<"--------------------soft repair--------------------"<<endl;
+    char result_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/result6.csv";
+    soft_repair(rel_tuple_path,rel_tuple_weight_path,rel_fd_path,rel_fd_weight_path,result_path);
+    cout<<"--------------------test_data--------------------"<<endl;
+    
+    cout<<"--------------------test_data--------------------"<<endl;
+    char rel_tuple_path5[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight5.csv";
+    char rel_tuple_weight_path5[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight5weight.txt";
+    //char rel_fd_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight_FDs.txt";
+    //char rel_fd_weight_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight_FDs_weight.txt";
+    //char result_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/result6.csv";
+    soft_repair(rel_tuple_path5,rel_tuple_weight_path5,rel_fd_path,rel_fd_weight_path,result_path);
+    cout<<"--------------------test_data--------------------"<<endl;*/
+    
+    
+    
+    /*cout<<"--------------------pollute_data--------------------"<<endl;
+    char rel_tuple_path[]="/Users/andy/Documents/Data/Flight/flight50kjmy.csv";
+    char rel_tuple_weight_path[]="";
+    char rel_fd_path[]="/Users/andy/Documents/Data/Flight/flight_FDs.txt";
+    char rel_fd_weight_path[]="";
+    soft_repair(rel_tuple_path,rel_tuple_weight_path,rel_fd_path,rel_fd_weight_path,"");
+    cout<<"--------------------pollute_data--------------------"<<endl;*/
+    
+    
     
     return 0;
 }
