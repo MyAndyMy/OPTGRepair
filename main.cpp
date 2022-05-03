@@ -225,7 +225,7 @@ void temporal_db_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,c
     /*--------------------以上normalization1，G-repair--------------------*/
     
 }
-void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd_weight_path,char* result_path){
+void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd_weight_path,char* result_path,char* result_path_lp){
     clock_t start,end;//计算时间
     SoftResult temp_SR;
     /*--------------------以下加载元组--------------------*/
@@ -238,21 +238,22 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     //for(int i=0;i<gen.source_tuple.size();++i) cout<<"attention:"<<gen.source_tuple[i].tuple_weight<<endl;
     cout<<endl;
     
-    /*pollute_flight_data*/
+    
+    //pollute_flight_data
     int start_nums=10000;
     int end_nums=40000;
-    while(start_nums<=end_nums){
+    /*while(start_nums<=end_nums){
         gen.pollute_flight(gen.source_tuple,start_nums,0.05,"/Users/andy/Documents/Data/Flight/five_FDs/fli5ght",5);
         start_nums=start_nums+2000;
-    }
-    
-    /*start_nums=10000;
-    while(start_nums<=end_nums){
-        gen.pollute_flight(gen.source_tuple,start_nums,0.05,"/Users/andy/Documents/Data/Flight/four_FDs/fli4ght",4);
-        start_nums=start_nums+2000;
-    }
+    }*/
     
     start_nums=10000;
+    /*while(start_nums<=end_nums){
+        gen.pollute_flight(gen.source_tuple,start_nums,0.05,"/Users/andy/Documents/Data/Flight/four_FDs/fli4ght",4);
+        start_nums=start_nums+2000;
+    }*/
+    
+    /*start_nums=10000;
     while(start_nums<=end_nums){
         gen.pollute_flight(gen.source_tuple,start_nums,0.05,"/Users/andy/Documents/Data/Flight/three_FDs/fli3ght",3);
         start_nums=start_nums+2000;
@@ -268,7 +269,8 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     while(start_nums<=end_nums){
         gen.pollute_flight(gen.source_tuple,start_nums,0.05,"/Users/andy/Documents/Data/Flight/one_FD/fli1ght",1);
         start_nums=start_nums+2000;
-    }*/
+    }
+    //gen.pollute_flight(gen.source_tuple,32000,0.05,"/Users/andy/Documents/Data/Flight/four_FDs/fli4ght",4);
     
     //gen.pollute_flight(gen.source_tuple,10000,0.05,"/Users/andy/Documents/Data/Flight/five_FDs/",5);
     /*pollute_flight_data*/
@@ -400,7 +402,17 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     gen.clear_source_tuple();
     vector<int> res;
     start=clock();
-    res=gen.greedy_sc(gen.UU,gen.C);
+    /*for(int i=0;i<gen.UU.size();++i){
+        cout<<gen.UU[i]<<endl;
+    }
+    cout<<"hhh"<<endl;
+    for(int i=0;i<gen.C.size();++i){
+        for(int j=0;j<gen.C[i].size();++j){
+            cout<<gen.C[i][j]<<", "<<endl;
+        }
+    }*/
+    //为了求sc_lp而注释
+    //res=gen.greedy_sc(gen.UU,gen.C);
     end=clock();
     cout<<"soft repair的贪心算法时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
     temp_SR.Greedy_time=(double)(end - start)/CLOCKS_PER_SEC;
@@ -469,8 +481,39 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     gen.relationship_left.clear();
     gen.relationship_S.clear();
     
-    gen.write_soft_result(result_path);
+    //为了求sc_lp而注释
+    //gen.write_soft_result(result_path);
     /*--------------------以上是set cover问题的贪心算法----------------*/
+    /*for(int i=0;i<gen.UU_lp.size();++i){
+        cout<<gen.UU[i]<<endl;
+    }
+    cout<<"sss"<<endl;
+    for(int i=0;i<gen.C_lp.size();++i){
+        for(int j=0;j<gen.C_lp[i].size();++j){
+            cout<<gen.C_lp[i][j]<<", "<<endl;
+        }
+    }*/
+    
+    vector<vector<int>> res_lp;
+    start=clock();
+    /*for(int i=0;i<gen.UU.size();++i){
+        cout<<gen.UU[i]<<endl;
+    }
+    cout<<"hhh"<<endl;
+    for(int i=0;i<gen.C.size();++i){
+        for(int j=0;j<gen.C[i].size();++j){
+            cout<<gen.C[i][j]<<", "<<endl;
+        }
+    }*/
+    res_lp=gen.lp_sc(gen.UU_lp,gen.C_lp);
+    end=clock();
+    cout<<"soft repair set cover LP 算法时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
+    cout<<"soft repair set cover LP cost:"<<gen.soft_lp_opt<<endl;
+    cout<<"soft repair set cover LP 被删元组加权和:"<<gen.soft_lp_wtuple<<endl;
+    cout<<"soft repair set cover LP 留下冲突个数:"<<gen.soft_lp_conflict<<endl;
+    cout<<"soft repair set cover LP 留下冲突加权和:"<<gen.soft_lp_wconflict<<endl;
+    //20220503 11:30改到这里！
+    gen.write_soft_result_lp(result_path_lp);
 }
 
 /*--------------------以下将soft_repair属性名称写到csv文件里----------------*/
@@ -544,7 +587,7 @@ void soft_repair_6FDs_hadoop(int start,int end){
         }
         c2[i]='\0';
         //soft_repair(rel_tuple_path.c_str(),rel_tuple_weight_path.c_str(),rel_fd_path,rel_fd_weight_path,result_path);
-        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path);
+        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path,"");
         
         
         rel_tuple_path.erase(47, 20);
@@ -596,7 +639,7 @@ void soft_repair_5FDs_hadoop(int start,int end){
         }
         c2[i]='\0';
         //soft_repair(rel_tuple_path.c_str(),rel_tuple_weight_path.c_str(),rel_fd_path,rel_fd_weight_path,result_path);
-        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path);
+        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path,"");
         
         //cout<<"xixi:"<<c1<<endl;
         //cout<<"xixi:"<<c2<<endl;
@@ -649,7 +692,7 @@ void soft_repair_4FDs_hadoop(int start,int end){
         }
         c2[i]='\0';
         //soft_repair(rel_tuple_path.c_str(),rel_tuple_weight_path.c_str(),rel_fd_path,rel_fd_weight_path,result_path);
-        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path);
+        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path,"");
         
         //cout<<"xixi:"<<c1<<endl;
         //cout<<"xixi:"<<c2<<endl;
@@ -703,7 +746,7 @@ void soft_repair_3FDs_hadoop(int start,int end){
         }
         c2[i]='\0';
         //soft_repair(rel_tuple_path.c_str(),rel_tuple_weight_path.c_str(),rel_fd_path,rel_fd_weight_path,result_path);
-        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path);
+        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path,"");
         
         //cout<<"xixi:"<<c1<<endl;
         //cout<<"xixi:"<<c2<<endl;
@@ -757,7 +800,7 @@ void soft_repair_2FDs_hadoop(int start,int end){
         }
         c2[i]='\0';
         //soft_repair(rel_tuple_path.c_str(),rel_tuple_weight_path.c_str(),rel_fd_path,rel_fd_weight_path,result_path);
-        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path);
+        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path,"");
         
         //cout<<"xixi:"<<c1<<endl;
         //cout<<"xixi:"<<c2<<endl;
@@ -769,7 +812,7 @@ void soft_repair_2FDs_hadoop(int start,int end){
 /*--------------------以上在hadoop执行soft repair2FD----------------*/
 
 /*--------------------以下在hadoop执行soft repair1FD----------------*/
-void soft_repair_1FDs_hadoop(int start,int end){
+void soft_repair_1FD_hadoop(int start,int end){
     string rel_tuple_path="/home/hadoop/JMYAndy/Data/Flight/one_FD/fli1ght";
     string rel_tuple_weight_path="/home/hadoop/JMYAndy/Data/Flight/one_FD/fli1ght";
     char rel_fd_path[]="/home/hadoop/JMYAndy/Data/Flight/one_FDs/flight_FDs1.txt";
@@ -811,7 +854,7 @@ void soft_repair_1FDs_hadoop(int start,int end){
         }
         c2[i]='\0';
         //soft_repair(rel_tuple_path.c_str(),rel_tuple_weight_path.c_str(),rel_fd_path,rel_fd_weight_path,result_path);
-        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path);
+        soft_repair(c1,c2,rel_fd_path,rel_fd_weight_path,result_path,"");
         
         //cout<<"xixi:"<<c1<<endl;
         //cout<<"xixi:"<<c2<<endl;
@@ -820,7 +863,7 @@ void soft_repair_1FDs_hadoop(int start,int end){
         rel_tuple_weight_path.erase(46, 26);
     }
 }
-/*--------------------以上在hadoop执行soft repair2FD----------------*/
+/*--------------------以上在hadoop执行soft repair1FD----------------*/
 
 int main(int argc, const char * argv[]) {
     cout<<"--------------------temporal db repair--------------------"<<endl;
@@ -833,8 +876,8 @@ int main(int argc, const char * argv[]) {
     
     cout<<endl;
 
-    //soft_repair_6FDs_hadoop(10000,40000);
-    //soft_repair_1FDs_hadoop(10000,14000);
+    //soft_repair_5FDs_hadoop(10000,40000);
+    soft_repair_1FD_hadoop(10000,40000);
     /*cout<<"--------------------test_data--------------------"<<endl;
     char rel_tuple_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight6.csv";
     char rel_tuple_weight_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight6weight.txt";
@@ -842,15 +885,16 @@ int main(int argc, const char * argv[]) {
     char rel_fd_weight_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight_FDs_weight.txt";
     char result_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/result6.csv";
     soft_repair(rel_tuple_path,rel_tuple_weight_path,rel_fd_path,rel_fd_weight_path,result_path);
-    cout<<"--------------------test_data--------------------"<<endl;
+    cout<<"--------------------test_data--------------------"<<endl;*/
     
-    cout<<"--------------------test_data--------------------"<<endl;
-    char rel_tuple_path5[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight5.csv";
-    char rel_tuple_weight_path5[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight5weight.txt";
-    //char rel_fd_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight_FDs.txt";
-    //char rel_fd_weight_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight_FDs_weight.txt";
-    //char result_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/result6.csv";
-    soft_repair(rel_tuple_path5,rel_tuple_weight_path5,rel_fd_path,rel_fd_weight_path,result_path);
+    /*cout<<"--------------------test_data--------------------"<<endl;
+    char rel_tuple_path5[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight6.csv";
+    char rel_tuple_weight_path5[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight6weight.txt";
+    char rel_fd_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight_FDs.txt";
+    char rel_fd_weight_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight_FDs_weight.txt";
+    char result_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/result6.csv";
+    char result_path_lp[]="/Users/andy/Documents/Data/test/testsoftgreedy/result6lp.csv";
+    soft_repair(rel_tuple_path5,rel_tuple_weight_path5,rel_fd_path,rel_fd_weight_path,result_path,result_path_lp);
     cout<<"--------------------test_data--------------------"<<endl;*/
     
     
@@ -860,7 +904,7 @@ int main(int argc, const char * argv[]) {
     char rel_tuple_weight_path[]="";
     char rel_fd_path[]="/Users/andy/Documents/Data/Flight/flight_FDs.txt";
     char rel_fd_weight_path[]="";
-    soft_repair(rel_tuple_path,rel_tuple_weight_path,rel_fd_path,rel_fd_weight_path,"");
+    //soft_repair(rel_tuple_path,rel_tuple_weight_path,rel_fd_path,rel_fd_weight_path,"");
     cout<<"--------------------pollute_data--------------------"<<endl;*/
     
     

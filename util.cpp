@@ -1119,6 +1119,7 @@ void Generator::print_all_info_sc(){
 void Generator::construct_sc(){
     for(int i=0;i<U.size();++i){
         UU.push_back(U[i].ele_id);
+        UU_lp.push_back(U[i].ele_id);
     }
     vector<int> temp;
     for(int i=0;i<S1.size();++i){
@@ -1127,8 +1128,10 @@ void Generator::construct_sc(){
             //cout<<"constructing set1ing:"<<S1[i].element[j].ele_id<<endl;
         }
         C.push_back(temp);
+        C_lp.push_back(temp);
         temp.clear();
         weight_bef.push_back(make_pair(S1[i].set_weight, 0));
+        weight_bef_lp.push_back(make_pair(S1[i].set_weight, 0));
         weight_aft.push_back(make_pair(S1[i].set_weight, 0));
         //weight.push_back(S1[i].set_weight);
     }
@@ -1137,8 +1140,10 @@ void Generator::construct_sc(){
             temp.push_back(S2[i].element[j].ele_id);
         }
         C.push_back(temp);
+        C_lp.push_back(temp);
         temp.clear();
         weight_bef.push_back(make_pair(S2[i].set_weight, 1));
+        weight_bef_lp.push_back(make_pair(S2[i].set_weight, 1));
         weight_aft.push_back(make_pair(S2[i].set_weight, 1));
         //weight.push_back(S2[i].set_weight);
     }
@@ -1602,7 +1607,9 @@ void Generator::pollute_flight(vector<Tuple> &tuple,int size,double err_rate,str
         }
         //hm[tuple[i].attrs_value[1]]--;
         int r=rand();//生成随机数[3,9]
-        fprintf(fp_weight,"%.1f\n",r%7+3+xiaoshu[turn]);
+        double t=r%7+3+xiaoshu[turn];
+        if(t>=10||t<0) fprintf(fp_weight,"%.1f\n",5.0);
+        else fprintf(fp_weight,"%.1f\n",r%7+3+xiaoshu[turn]);
         turn++;
         if(turn>=10){
             turn =0;
@@ -1658,7 +1665,7 @@ void Generator::pollute_flight(vector<Tuple> &tuple,int size,double err_rate,str
             }
         }
         else if(nums_FD==1){
-            r_FD=5;
+            r_FD=4;
         }
         if(r_FD!=5){
             //第0/1/2/3/4个FD
@@ -1814,7 +1821,9 @@ void Generator::pollute_flight(vector<Tuple> &tuple,int size,double err_rate,str
         }
         
         r=rand();//生成随机数(0,3]
-        fprintf(fp_weight,"%.1f\n",r%3+1+xiaoshu[turn]);
+        double t=r%3+1+xiaoshu[turn];
+        if(t>3||t<0) fprintf(fp_weight,"%.1f\n",1.5);
+        else fprintf(fp_weight,"%.1f\n",r%3+1+xiaoshu[turn]);
         turn ++;
         if(turn>=10){
             turn =0;
@@ -1890,4 +1899,165 @@ void Generator::write_soft_result(char* soft_repair_result_path){
     fclose (fp);
 }
 /*--------------------以上将soft_repair结果写到csv文件里----------------*/
+
+
+/*--------------------以下是set cover问题的LP算法----------------*/
+vector<vector<int> > Generator::lp_sc(vector<int> X, vector<vector<int> > F) {
+    vector<vector<int> > C;
+    vector<double> x = lp_solver_sc(X, F);
+    /*以下jmy*/
+    for(int i=0;i<x.size();++i) cout<<"hh:"<<x[i]<<endl;
+    /*以上jmy*/
+    int f = get_f(X, F);
+    // std::cout << f << std::endl;
+    for (int i = 0; i < x.size(); i++) {
+        /*以下jmy*/
+        for(int m=0;m<F[i].size();++m){
+            cout<<"应该是所有sets:"<<F[i][m]<<", ";
+        }
+        cout<<endl;
+        /*以上jmy*/
+        // std::cout << "i " << x[i] << std::endl;
+        if (x[i] >= 1.0/f) {
+            /*以下jmy*/
+            for(int m=0;m<F[i].size();++m){
+                cout<<"应该是被选中的sets:"<<F[i][m]<<", ";
+            }
+            cout<<endl;
+            /*以上jmy*/
+            C.push_back(F[i]);
+            //在这里改soft_lp_opt/soft_lp_wtuple/soft_lp_wconflict
+            //迭代器从weight_bef_lp.begin()走i步
+            auto it_lp=weight_bef_lp.begin();
+            for(int d=0;d<i;++d){
+                it_lp++;
+            }
+            //如果是标记0,则加入soft_lp_wtuple
+            if(it_lp->second==0){
+                soft_lp_wtuple=soft_lp_wtuple+it_lp->first;
+            }
+            //如果是标记1,则加入soft_lp_wconflict
+            if(it_lp->second==1){
+                soft_lp_wconflict=soft_lp_wconflict+it_lp->first;
+                soft_lp_conflict++;
+            }
+        }
+        else{
+            /*以下jmy*/
+            for(int m=0;m<F[i].size();++m){
+                cout<<"应该是没被选中的sets:"<<F[i][m]<<", ";
+            }
+            cout<<endl;
+            /*以上jmy*/
+        }
+    }
+    /*以下jmy*/
+    for(int i=0;i<C.size();++i){
+        for(int j=0;j<C[i].size();++j)  cout<<"ss:"<<C[i][j];
+        cout<<endl;
+    }
+    /*以上jmy*/
+    /*以下jmy*/
+    cout<<"weight_bef_lp"<<endl;
+    for(auto it:weight_bef_lp){
+        cout<<it.first<<"..."<<it.second<<endl;
+    }
+    cout<<"weight_aft_lp"<<endl;
+    for(auto it:weight_aft_lp){
+        cout<<it.first<<"..."<<it.second<<endl;
+    }
+    /*以上jmy*/
+    
+    /*以下jmy*/
+    soft_lp_opt=soft_lp_wtuple+soft_lp_wconflict;
+    //输出soft_lp_opt/soft_lp_wtuple/soft_lp_wconflict/soft_lp_conflict康康
+    cout<<"输出soft_lp_opt康康:"<<soft_lp_opt<<endl;
+    cout<<"输出soft_lp_wtuple康康:"<<soft_lp_wtuple<<endl;
+    cout<<"输出soft_lp_conflict康康:"<<soft_lp_conflict<<endl;
+    cout<<"输出soft_lp_wconflict康康:"<<soft_lp_wconflict<<endl;
+    /*以上jmy*/
+    return C;
+}
+/*--------------------以上是set cover问题的LP算法----------------*/
+
+/*--------------------以下是lp_solver_sc----------------*/
+vector<double> Generator::lp_solver_sc(vector<int> X, vector<vector<int> > F) {
+    vector<double> x;
+    int n = X.size();
+    int m = F.size();
+    // std::cout << n << m << std::endl;
+initialize:
+    glp_prob *lp;
+    lp = glp_create_prob();
+    glp_set_obj_dir(lp, GLP_MIN);
+auxiliary_variables_rows:
+    glp_add_rows(lp, n);
+    for (int i = 1; i <= n; i++) glp_set_row_bnds(lp, i, GLP_LO, 1.0, 0.0);
+variables_columns:
+    glp_add_cols(lp, m);
+    for (int i = 1; i <= m; i++) glp_set_col_bnds(lp, i, GLP_DB, 0.0, 1.0);
+to_minimize:
+    for (int i = 1; i <= m; i++) glp_set_obj_coef(lp, i, 1.0);
+constrant_matrix:
+    int size = m*n;
+    // std::cout << size << std::endl;
+    int *ia = new int[size + 1];
+    int *ja = new int[size + 1];
+    // std::cout << size << std::endl;
+    double *ar = new double[size + 1];
+    // std::cout << size << std::endl;
+    for (int i = 1; i <= n; i++) {
+        // std::cout << i << std::endl;
+        for (int j = 1; j <= m; j++) {
+            int k = (i - 1)*m + j;
+            // std::cout << k << std::endl;
+            ia[k] = i;
+            ja[k] = j;
+            vector<int> f = F[j-1];
+            vector<int>::iterator it = find(f.begin(), f.end(), i-1);
+            if (it != f.end()) ar[k] = 1;
+            else ar[k] = 0;
+        }
+    }
+    glp_load_matrix(lp, size, ia, ja, ar);
+calculate:
+    glp_simplex(lp, NULL);
+output:
+    // std::cout << "opt:" << glp_get_obj_val(lp) << std::endl;
+    for (int i = 1; i <= m; i++) x.push_back(glp_get_col_prim(lp, i));
+cleanup:
+    glp_delete_prob(lp);
+    return x;
+}
+/*--------------------以上是lp_solver_sc----------------*/
+
+/*--------------------以下是get_f----------------*/
+int Generator::get_f(vector<int> X, vector<vector<int> > F) {
+    int count = 0, maxcount = 0;
+    for (int i = 0; i < X.size(); i++) {
+        for (int j =  0; j < F.size(); j++) {
+            vector<int> S = F[j];
+            vector<int>::iterator it = find(S.begin(), S.end(), X[i]);
+            if (it != S.end()) count++;
+        }
+        if (count > maxcount) maxcount = count;
+        count = 0;
+    }
+    return maxcount;
+}
+/*--------------------以上是get_f----------------*/
+
+/*--------------------以下将soft_repair_lp结果写到csv文件里----------------*/
+void Generator::write_soft_result_lp(char* soft_repair_result_path){
+    FILE *fp;
+    fp = fopen(soft_repair_result_path,"ab");
+    if(fp==NULL) cout<<"大失败！"<<endl;
+    else cout<<"大成功！"<<endl;
+    fprintf(fp,"%.5f ,",soft_lp_opt);
+    fprintf(fp,"%.5f ,",soft_lp_wtuple);
+    fprintf(fp,"%d ,",soft_lp_conflict);
+    fprintf(fp,"%.5f ,",soft_lp_wconflict);
+    fclose (fp);
+}
+/*--------------------以上将soft_repair_lp结果写到csv文件里----------------*/
 

@@ -139,14 +139,24 @@ public:
     vector<Set1> S1;
     vector<Set2> S2;
     
-    vector<int> UU;//for sc
-    vector<vector<int>> C;//for sc
-    //vector<int> weight;//for sc
+    vector<int> UU;//for sc_greedy
+    vector<vector<int>> C;//for sc_greedy
     
-    vector<pair<double,int>> weight_bef;//for sc
-    vector<pair<double,int>> weight_aft;//for sc
+    vector<int> UU_lp;//for sc_lp
+    vector<vector<int>> C_lp;//for sc_lp
     
-    double greedy_opt=0;//for sc
+    vector<pair<double,int>> weight_bef;//for sc_greedy
+    vector<pair<double,int>> weight_aft;//for sc_greedy
+    
+    vector<pair<double,int>> weight_bef_lp;//for sc_lp
+    vector<pair<double,int>> weight_aft_lp;//for sc_lp
+    
+    double greedy_opt=0;//for sc_greedy
+    
+    double soft_lp_opt=0;//for sc_lp: soft_lp_opt=soft_lp_wtuple+soft_lp_wconflict
+    double soft_lp_wtuple=0;//for sc_lp被删元组权值加权和
+    double soft_lp_wconflict=0;//for sc_lp留下冲突权值加权和
+    int soft_lp_conflict=0;//for sc_lp留下冲突个数
     
     vector<SoftResult> SR;
     
@@ -212,6 +222,10 @@ public:
     void pollute_flight(vector<Tuple> &tuple,int size,double err_rate,string result_tuple_path,int nums_FD);
     void write_soft_result(char* soft_repair_result_path);
     //void random_tuple_weight(int size,double err_rate);
+    vector<vector<int> > lp_sc(vector<int> X, vector<vector<int> > F);
+    vector<double> lp_solver_sc(vector<int> X, vector<vector<int> > F);
+    int get_f(vector<int> X, vector<vector<int> > F);
+    void write_soft_result_lp(char* soft_repair_result_path);
 };
 
 #endif /* util_hpp */
