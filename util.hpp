@@ -157,6 +157,9 @@ public:
     double soft_lp_wtuple=0;//for sc_lp被删元组权值加权和
     double soft_lp_wconflict=0;//for sc_lp留下冲突权值加权和
     int soft_lp_conflict=0;//for sc_lp留下冲突个数
+    int soft_lp_tuple=0;//for sc_lp被删元组个数
+    
+    double sc_lp_time;
     
     vector<SoftResult> SR;
     

@@ -1363,9 +1363,9 @@ void Generator::pollute_flight(vector<Tuple> &tuple,int size,double err_rate,str
     //strcat(result_file_name,jmy);
     //strcat(result_file_name,back);
     //strcat(result_file_name,postfix);
-    cout<<"result_tuple_path:"<<result_tuple_path<<endl;
+    //cout<<"result_tuple_path:"<<result_tuple_path<<endl;
     string result_weight_path=result_path+middle+jmy+back+"weight"+weight_postfix;
-    cout<<"result_weight_path"<<result_weight_path<<endl;
+    //cout<<"result_weight_path"<<result_weight_path<<endl;
     
     fp = fopen(result_tuple_path.data(), "w");
     fp_weight = fopen(result_weight_path.data(), "w");
@@ -1906,35 +1906,43 @@ vector<vector<int> > Generator::lp_sc(vector<int> X, vector<vector<int> > F) {
     vector<vector<int> > C;
     vector<double> x = lp_solver_sc(X, F);
     /*以下jmy*/
-    for(int i=0;i<x.size();++i) cout<<"hh:"<<x[i]<<endl;
+    //for(int i=0;i<x.size();++i) cout<<"hh:"<<x[i]<<endl;
     /*以上jmy*/
     int f = get_f(X, F);
     // std::cout << f << std::endl;
     for (int i = 0; i < x.size(); i++) {
         /*以下jmy*/
         for(int m=0;m<F[i].size();++m){
-            cout<<"应该是所有sets:"<<F[i][m]<<", ";
+            //cout<<"应该是所有sets:"<<F[i][m]<<", ";
         }
-        cout<<endl;
+        //cout<<endl;
         /*以上jmy*/
         // std::cout << "i " << x[i] << std::endl;
         if (x[i] >= 1.0/f) {
             /*以下jmy*/
             for(int m=0;m<F[i].size();++m){
-                cout<<"应该是被选中的sets:"<<F[i][m]<<", ";
+                //cout<<"应该是被选中的sets:"<<F[i][m]<<", ";
             }
-            cout<<endl;
+            //cout<<endl;
             /*以上jmy*/
             C.push_back(F[i]);
             //在这里改soft_lp_opt/soft_lp_wtuple/soft_lp_wconflict
             //迭代器从weight_bef_lp.begin()走i步
             auto it_lp=weight_bef_lp.begin();
+            /*以下jmy
+            for(int i=0;i<weight_bef_lp.size();++i){
+                cout<<it_lp->first<<", "<<it_lp->second<<endl;
+                it_lp++;
+            }
+            以上jmy*/
             for(int d=0;d<i;++d){
                 it_lp++;
             }
             //如果是标记0,则加入soft_lp_wtuple
             if(it_lp->second==0){
+                
                 soft_lp_wtuple=soft_lp_wtuple+it_lp->first;
+                soft_lp_tuple++;
             }
             //如果是标记1,则加入soft_lp_wconflict
             if(it_lp->second==1){
@@ -1944,38 +1952,43 @@ vector<vector<int> > Generator::lp_sc(vector<int> X, vector<vector<int> > F) {
         }
         else{
             /*以下jmy*/
+            if(i<=source_tuple.size()-1) left_tuple.push_back(source_tuple[i]);
             for(int m=0;m<F[i].size();++m){
-                cout<<"应该是没被选中的sets:"<<F[i][m]<<", ";
+                //cout<<"应该是没被选中的sets:"<<F[i][m]<<", ";
             }
-            cout<<endl;
+            //cout<<endl;
             /*以上jmy*/
         }
     }
-    /*以下jmy*/
+    /*以下jmy
     for(int i=0;i<C.size();++i){
         for(int j=0;j<C[i].size();++j)  cout<<"ss:"<<C[i][j];
         cout<<endl;
     }
-    /*以上jmy*/
-    /*以下jmy*/
-    cout<<"weight_bef_lp"<<endl;
+    */
+    
+    /*cout<<"weight_bef_lp"<<endl;
     for(auto it:weight_bef_lp){
         cout<<it.first<<"..."<<it.second<<endl;
     }
     cout<<"weight_aft_lp"<<endl;
     for(auto it:weight_aft_lp){
         cout<<it.first<<"..."<<it.second<<endl;
-    }
-    /*以上jmy*/
+    }*/
+    
     
     /*以下jmy*/
     soft_lp_opt=soft_lp_wtuple+soft_lp_wconflict;
     //输出soft_lp_opt/soft_lp_wtuple/soft_lp_wconflict/soft_lp_conflict康康
-    cout<<"输出soft_lp_opt康康:"<<soft_lp_opt<<endl;
-    cout<<"输出soft_lp_wtuple康康:"<<soft_lp_wtuple<<endl;
-    cout<<"输出soft_lp_conflict康康:"<<soft_lp_conflict<<endl;
-    cout<<"输出soft_lp_wconflict康康:"<<soft_lp_wconflict<<endl;
+    //cout<<"输出soft_lp_opt康康:"<<soft_lp_opt<<endl;
+    //cout<<"输出soft_lp_wtuple康康:"<<soft_lp_wtuple<<endl;
+    //cout<<"输出soft_lp_conflict康康:"<<soft_lp_conflict<<endl;
+    //cout<<"输出soft_lp_wconflict康康:"<<soft_lp_wconflict<<endl;
     /*以上jmy*/
+    
+    /*for(int i=0;i<left_tuple.size();++i){
+        left_tuple[i].print_all_info();
+    }*/
     return C;
 }
 /*--------------------以上是set cover问题的LP算法----------------*/
@@ -2053,10 +2066,12 @@ void Generator::write_soft_result_lp(char* soft_repair_result_path){
     fp = fopen(soft_repair_result_path,"ab");
     if(fp==NULL) cout<<"大失败！"<<endl;
     else cout<<"大成功！"<<endl;
+    fprintf(fp,"%.5f ,",sc_lp_time);
     fprintf(fp,"%.5f ,",soft_lp_opt);
+    fprintf(fp,"%d ,",soft_lp_tuple);
     fprintf(fp,"%.5f ,",soft_lp_wtuple);
     fprintf(fp,"%d ,",soft_lp_conflict);
-    fprintf(fp,"%.5f ,",soft_lp_wconflict);
+    fprintf(fp,"%.5f\n",soft_lp_wconflict);
     fclose (fp);
 }
 /*--------------------以上将soft_repair_lp结果写到csv文件里----------------*/
