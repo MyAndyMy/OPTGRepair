@@ -2076,3 +2076,1301 @@ void Generator::write_soft_result_lp(char* soft_repair_result_path){
 }
 /*--------------------以上将soft_repair_lp结果写到csv文件里----------------*/
 
+/*--------------------以下pollute数据----------------*/
+void Generator::pollute_flight_graph(vector<Tuple> &tuple,int size,double err_rate,string result_path,int nums_FD){
+    FILE *fp;
+    FILE *fp_weight;
+    size_t nums=attrs_name.size();
+    //char result_file_name[]="/Users/andy/Documents/Data/Flight/flight";
+    //char weight_file_name[]="/Users/andy/Documents/Data/Flight/flight";
+    string postfix=".csv";
+    string weight_postfix=".txt";
+    string jmy="jmy_graph";
+    //char middle[6];
+    //char back[10];
+    //char w[]="weight";
+    string middle=to_string(size);
+    string back=to_string(err_rate);
+    //sprintf(back,"%f",err_rate);
+    //sprintf(middle,"%d",size);
+    string result_tuple_path=result_path+middle+jmy+back+postfix;
+    //strcat(result_file_name,middle);
+    //strcat(result_file_name,jmy);
+    //strcat(result_file_name,back);
+    //strcat(result_file_name,postfix);
+    //cout<<"result_tuple_path:"<<result_tuple_path<<endl;
+    string result_weight_path=result_path+middle+jmy+back+"weight"+weight_postfix;
+    //cout<<"result_weight_path"<<result_weight_path<<endl;
+    
+    fp = fopen(result_tuple_path.data(), "w");
+    fp_weight = fopen(result_weight_path.data(), "w");
+    if(fp==NULL) cout<<"大失败！"<<endl;
+    else cout<<"大成功！"<<endl;
+    vector<double> xiaoshu={0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9};
+    int turn=0;
+    int n=1;
+    for(n=1;n<nums-1;++n){
+        //cout<<attrs_name[n].c_str()<<endl;
+        fprintf(fp,"%s ,",attrs_name[n].c_str());
+    }
+    cout<<attrs_name[n].c_str()<<endl;
+    fprintf(fp,"%s\n",attrs_name[n].c_str());
+    //fclose (fp);
+    int err_tuples=size*err_rate;
+    //err_tuples=err_tuples/2;
+    //cout<<"err_tuples:"<<err_tuples<<endl;
+    //int err=0;
+    unordered_map<string, int> hm;//hm中存的是前size个元组中出现的flight名称
+    unordered_map<string, string> locate_scheduled_dept;//记录flight对应的scheduled_dept
+    unordered_map<string, string> locate_actual_dept;//记录flight对应的actual_dept
+    unordered_map<string, string> locate_scheduled_arrival;//记录flight对应的scheduled_arrival
+    unordered_map<string, string> locate_actual_arrival;//记录flight对应的actual_arrival
+    unordered_map<string, string> locate_dept_gate;//记录flight对应的actual_arrival
+    unordered_map<string, string> locate_arrival_gate;//记录flight对应的actual_arrival
+    
+    for(int y=0;y<50000;++y){
+        hm[Trim(tuple[y].attrs_value[1]).substr(11,24)]++;
+        hm[Trim(tuple[y].attrs_value[1]).substr(11,24)+"r"]++;
+        if(Trim(tuple[y].attrs_value[2])!=""){
+            locate_scheduled_dept[Trim(tuple[y].attrs_value[1])]=Trim(tuple[y].attrs_value[2]);
+        }
+        if(Trim(tuple[y].attrs_value[3])!=""){
+            locate_actual_dept[Trim(tuple[y].attrs_value[1])]=Trim(tuple[y].attrs_value[3]);
+        }
+        if(Trim(tuple[y].attrs_value[4])!=""){
+            locate_dept_gate[Trim(tuple[y].attrs_value[1])]=Trim(tuple[y].attrs_value[4]);
+        }
+        if(Trim(tuple[y].attrs_value[5])!=""){
+            locate_scheduled_arrival[Trim(tuple[y].attrs_value[1])]=Trim(tuple[y].attrs_value[5]);
+        }
+        if(Trim(tuple[y].attrs_value[6])!=""){
+            locate_actual_arrival[Trim(tuple[y].attrs_value[1])]=Trim(tuple[y].attrs_value[6]);
+        }
+        if(Trim(tuple[y].attrs_value[7])!=""){
+            locate_arrival_gate[Trim(tuple[y].attrs_value[1])]=Trim(tuple[y].attrs_value[7]);
+        }
+    }
+    
+    vector<string> locate_airline={"United Airlines","Delta Air Lines","Southwest","Alask Airlines","Spirit Airlines","Allegiant Air LLC","JetBlue Airways","Denver Air Connection","American Airlines","Cape Air","Frontier Airlines","Boutique Air","Grant Aviation","Avelo Airlines","Breeze Airways","Hawaiian Airlines","Sun Country Airlines","Air Wisconsin","American Eagle","CommutAir","Contour Airlines","Elite Airways","Endeavor Air","Envoy Air","GoJet Airlines","Horizon Air","Mesa Airlines","Piedmont Airlines","PSA Airlines","Republic Airways","Silver Airways","SkyWest Airlines","Advanced Air","Air Choice One","Air Sunshine","Bering Air","Boutique Air","Everts Air","Grand Canyon Airlines","Hageland Aviation Services","Island Airways","JSX","Kenmore Air","Key Lime Air","Mokulele Airlines","San Juan Airlines","Servant Air","Surf Air","Taquan Air","Utah Airways"};
+    
+    vector<string> locate_destination={"AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY","DC","PR","VI"};
+    
+    size_t nums_scheduled_dept=locate_scheduled_dept.size();
+    size_t nums_actual_dept=locate_actual_dept.size();
+    size_t nums_scheduled_arrival=locate_scheduled_arrival.size();
+    size_t nums_actual_arrival=locate_actual_arrival.size();
+    size_t nums_dept_gate=locate_dept_gate.size();
+    size_t nums_arrival_gate=locate_arrival_gate.size();
+    size_t nums_locate_airline=locate_airline.size();
+    size_t nums_locate_destination=locate_destination.size();
+    //输出locate和hm看看
+    //bool flag=true;
+    auto it_for_flight=hm.begin();
+    cout<<"hm.size():"<<hm.size()<<endl;
+    /*for(auto it:hm){
+        cout<<"test:"<<it.first<<endl;
+        cout<<"test:"<<it.second<<endl;
+    }*/
+    int start_date=20210100;
+    char str[9];
+    sprintf(str,"%d",start_date);
+    
+    vector<vector<string> > normal_tuple;
+    //char str[]="20210101";
+    for(int i=0;i<size-err_tuples;i++){
+        //flag=true;
+        //str=str+'1';
+        vector<string> temp_normal_tuple;
+        int j=0;
+        for(j=0;j<nums-1;++j){
+            if(j==0){//flight
+                if(it_for_flight!=hm.end()){
+                    if(strcmp(str,"20210930")<0){
+                        if(str[5]-'0'==1||str[5]-'0'==3||str[5]-'0'==5||str[5]-'0'==7||str[5]-'0'==8){
+                            if((str[6]-'0')*10+(str[7]-'0')>30){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20210000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                        else if(str[5]-'0'==2){
+                            if((str[6]-'0')*10+(str[7]-'0')>27){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20210000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                        else if(str[5]-'0'==4||str[5]-'0'==6||str[5]-'0'==9){
+                            if((str[6]-'0')*10+(str[7]-'0')>29){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20210000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                    }
+                    else if(strcmp(str,"20210930")==0){
+                        start_date=20211001;
+                        sprintf(str,"%d",start_date);
+                    }
+                    else if(strcmp(str,"20210930")>0){
+                        if(str[5]-'0'==0||str[5]-'0'==2){
+                            if((str[6]-'0')*10+(str[7]-'0')>30){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20211000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                        else if(str[5]-'0'==1){
+                            if((str[6]-'0')*10+(str[7]-'0')>29){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20211000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                    }
+                    if(strcmp(str,"20211301")==0){
+                        it_for_flight++;
+                        start_date=20210101;
+                        sprintf(str,"%d",start_date);
+                    }
+                    fprintf(fp,"%s ,",(str+it_for_flight->first).c_str());
+                    temp_normal_tuple.push_back((str+it_for_flight->first).c_str());
+                }
+                else{
+                    fprintf(fp,"%s ,","sss");
+                    temp_normal_tuple.push_back("sss");
+                }
+            }
+            else if(j==1){//scheduled_dept
+                //srand((int)time(0));
+                int j=rand();//生成随机数[0,nums_scheduled_dept-1]
+                auto it=locate_scheduled_dept.begin();
+                for(int h=0;h<j%nums_scheduled_dept;h++){
+                    it++;
+                }
+                fprintf(fp,"%s ,",it->second.c_str());
+                temp_normal_tuple.push_back(it->second.c_str());
+            }
+            else if(j==2){//actual_dept
+                int j=rand();//生成随机数[0,nums_actual_dept-1]
+                auto it=locate_actual_dept.begin();
+                for(int h=0;h<j%nums_actual_dept;h++){
+                    it++;
+                }
+                fprintf(fp,"%s ,",it->second.c_str());
+                temp_normal_tuple.push_back(it->second.c_str());
+            }
+            else if(j==3){//dept_gate
+                int j=rand();//生成随机数[0,nums_dept_gate-1]
+                auto it=locate_dept_gate.begin();
+                for(int h=0;h<j%nums_dept_gate;h++){
+                    it++;
+                }
+                fprintf(fp,"%s ,",it->second.c_str());
+                temp_normal_tuple.push_back(it->second.c_str());
+            }
+            else if(j==4){//scheduled_arrival
+                int j=rand();//生成随机数[0,nums_scheduled_arrival-1]
+                auto it=locate_scheduled_arrival.begin();
+                for(int h=0;h<j%nums_scheduled_arrival;h++){
+                    it++;
+                }
+                fprintf(fp,"%s ,",it->second.c_str());
+                temp_normal_tuple.push_back(it->second.c_str());
+            }
+            else if(j==5){//actual_arrival
+                int j=rand();//生成随机数[0,nums_actual_arrival-1]
+                auto it=locate_actual_arrival.begin();
+                for(int h=0;h<j%nums_actual_arrival;h++){
+                    it++;
+                }
+                fprintf(fp,"%s ,",it->second.c_str());
+                temp_normal_tuple.push_back(it->second.c_str());
+            }
+            else if(j==6){//arrival_gate
+                int j=rand();//生成随机数[0,nums_arrival_gate-1]
+                auto it=locate_arrival_gate.begin();
+                for(int h=0;h<j%nums_arrival_gate;h++){
+                    it++;
+                }
+                fprintf(fp,"%s ,",it->second.c_str());
+                temp_normal_tuple.push_back(it->second.c_str());
+            }
+            else if(j==7){//airline
+                int j=rand();//生成随机数[0,nums_locate_airline-1]
+                auto it=locate_airline.begin();
+                for(int h=0;h<j%nums_locate_airline;h++){
+                    it++;
+                }
+                fprintf(fp,"%s ,",(*it).c_str());
+                temp_normal_tuple.push_back((*it).c_str());
+            }
+            else if(j==8){//destination
+                int j=rand();//生成随机数[0,nums_locate_destination-1]
+                auto it=locate_destination.begin();
+                for(int h=0;h<j%nums_locate_destination;h++){
+                    it++;
+                }
+                fprintf(fp,"%s\n",(*it).c_str());
+                temp_normal_tuple.push_back((*it).c_str());
+            }
+        }
+        //hm[tuple[i].attrs_value[1]]--;
+        int r=rand();//生成随机数[3,9]
+        double t=r%7+3+xiaoshu[turn];
+        if(t>=10||t<0) fprintf(fp_weight,"%.1f\n",5.0);
+        else fprintf(fp_weight,"%.1f\n",r%7+3+xiaoshu[turn]);
+        turn++;
+        if(turn>=10){
+            turn =0;
+        }
+        normal_tuple.push_back(temp_normal_tuple);
+    }
+    
+    //20220506生成冲突的连通分量，重点是在改这里以下！！！！！
+    //start_date=20220100;
+    //char str[9];
+    //sprintf(str,"%d",start_date);
+    str[0]='2';
+    str[1]='0';
+    str[2]='2';
+    str[3]='2';
+    str[4]='0';
+    str[5]='1';
+    str[6]='0';
+    str[7]='0';
+    str[8]='\0';
+    vector<vector<string> > candidate_dirty_tuple;
+    for(int i=0;i<err_tuples;i++){
+        //先随机生成500个元组
+        //flag=true;
+        //str=str+'1';
+        vector<string> temp_candidate_dirty_tuple;
+        int j=0;
+        for(j=0;j<nums-1;++j){
+            if(j==0){//flight
+                if(it_for_flight!=hm.end()){
+                    if(strcmp(str,"20220930")<0){
+                        if(str[5]-'0'==1||str[5]-'0'==3||str[5]-'0'==5||str[5]-'0'==7||str[5]-'0'==8){
+                            if((str[6]-'0')*10+(str[7]-'0')>30){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20220000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                        else if(str[5]-'0'==2){
+                            if((str[6]-'0')*10+(str[7]-'0')>27){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20220000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                        else if(str[5]-'0'==4||str[5]-'0'==6||str[5]-'0'==9){
+                            if((str[6]-'0')*10+(str[7]-'0')>29){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20220000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                    }
+                    else if(strcmp(str,"20220930")==0){
+                        start_date=20221001;
+                        sprintf(str,"%d",start_date);
+                    }
+                    else if(strcmp(str,"20220930")>0){
+                        if(str[5]-'0'==0||str[5]-'0'==2){
+                            if((str[6]-'0')*10+(str[7]-'0')>30){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20221000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                        else if(str[5]-'0'==1){
+                            if((str[6]-'0')*10+(str[7]-'0')>29){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20221000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                    }
+                    if(strcmp(str,"20221301")==0){
+                        it_for_flight++;
+                        start_date=20220101;
+                        sprintf(str,"%d",start_date);
+                    }
+                    //fprintf(fp,"%s ,",(str+it_for_flight->first).c_str());
+                    temp_candidate_dirty_tuple.push_back((str+it_for_flight->first).c_str());
+                }
+                else{
+                    fprintf(fp,"%s ,","sss");
+                    temp_candidate_dirty_tuple.push_back("sss");
+                }
+            }
+            else if(j==1){//scheduled_dept
+                //srand((int)time(0));
+                int j=rand();//生成随机数[0,nums_scheduled_dept-1]
+                auto it=locate_scheduled_dept.begin();
+                for(int h=0;h<j%nums_scheduled_dept;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                temp_candidate_dirty_tuple.push_back(it->second.c_str());
+            }
+            else if(j==2){//actual_dept
+                int j=rand();//生成随机数[0,nums_actual_dept-1]
+                auto it=locate_actual_dept.begin();
+                for(int h=0;h<j%nums_actual_dept;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                temp_candidate_dirty_tuple.push_back(it->second.c_str());
+            }
+            else if(j==3){//dept_gate
+                int j=rand();//生成随机数[0,nums_dept_gate-1]
+                auto it=locate_dept_gate.begin();
+                for(int h=0;h<j%nums_dept_gate;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                temp_candidate_dirty_tuple.push_back(it->second.c_str());
+            }
+            else if(j==4){//scheduled_arrival
+                int j=rand();//生成随机数[0,nums_scheduled_arrival-1]
+                auto it=locate_scheduled_arrival.begin();
+                for(int h=0;h<j%nums_scheduled_arrival;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                temp_candidate_dirty_tuple.push_back(it->second.c_str());
+            }
+            else if(j==5){//actual_arrival
+                int j=rand();//生成随机数[0,nums_actual_arrival-1]
+                auto it=locate_actual_arrival.begin();
+                for(int h=0;h<j%nums_actual_arrival;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                temp_candidate_dirty_tuple.push_back(it->second.c_str());
+            }
+            else if(j==6){//arrival_gate
+                int j=rand();//生成随机数[0,nums_arrival_gate-1]
+                auto it=locate_arrival_gate.begin();
+                for(int h=0;h<j%nums_arrival_gate;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                temp_candidate_dirty_tuple.push_back(it->second.c_str());
+            }
+            else if(j==7){//airline
+                int j=rand();//生成随机数[0,nums_locate_airline-1]
+                auto it=locate_airline.begin();
+                for(int h=0;h<j%nums_locate_airline;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",(*it).c_str());
+                temp_candidate_dirty_tuple.push_back((*it).c_str());
+            }
+            else if(j==8){//destination
+                int j=rand();//生成随机数[0,nums_locate_destination-1]
+                auto it=locate_destination.begin();
+                for(int h=0;h<j%nums_locate_destination;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s\n",(*it).c_str());
+                temp_candidate_dirty_tuple.push_back((*it).c_str());
+            }
+        }
+        //hm[tuple[i].attrs_value[1]]--;
+        
+        /*int r=rand();//生成随机数(0,3]
+        double t=r%3+1+xiaoshu[turn];
+        if(t>3||t<0) fprintf(fp_weight,"%.1f\n",1.5);
+        else fprintf(fp_weight,"%.1f\n",r%3+1+xiaoshu[turn]);
+        turn++;
+        if(turn>=10){
+            turn =0;
+        }*/
+        //不给第9501到第10000赋权
+        candidate_dirty_tuple.push_back(temp_candidate_dirty_tuple);
+    }
+    //以上生成了candidate_dirty_tuple
+    
+    /*cout<<"candidate_dirty_tuple.size()"<<candidate_dirty_tuple.size()<<endl;
+    for(int i=0;i<10;++i){
+        cout<<candidate_dirty_tuple[i][0]<<endl;
+        cout<<candidate_dirty_tuple[i][1]<<endl;
+        cout<<candidate_dirty_tuple[i][2]<<endl;
+        cout<<candidate_dirty_tuple[i][3]<<endl;
+        cout<<candidate_dirty_tuple[i][4]<<endl;
+        cout<<candidate_dirty_tuple[i][5]<<endl;
+        cout<<candidate_dirty_tuple[i][6]<<endl;
+        cout<<candidate_dirty_tuple[i][7]<<endl;
+        cout<<candidate_dirty_tuple[i][8]<<endl;
+    }*/
+    
+    //下面给他们连边
+    vector<pair<int,int>> is_conflict_fd0;
+    vector<pair<int,int>> is_conflict_fd1;
+    vector<pair<int,int>> is_conflict_fd2;
+    vector<pair<int,int>> is_conflict_fd3;
+    vector<pair<int,int>> is_conflict_fd4;
+    vector<pair<int,int>> is_conflict_fd5;
+    
+    int edge_count=0;
+    //插入10000条冲突边
+    while(edge_count<10000){
+        int nums_ditry_tuple=candidate_dirty_tuple.size()-1;
+        int r=rand();
+        int ti=(r % (nums_ditry_tuple+1));
+        r=rand();
+        int tj=(r % (nums_ditry_tuple+1));
+        while(ti==tj){
+            r=rand();
+            tj=(r % (nums_ditry_tuple+1));
+        }
+        //生成两个不同的，[0,nums_ditry_tuple]之间的int型整数ti和tj
+        r=rand();//生成随机数[0,5]，决定违反哪个FD
+        int r_FD=r%6;
+        //违反第r_FD个FD
+        if(nums_FD==6){}
+        else if(nums_FD==5){
+            if(r_FD==3){
+                r_FD=0;
+            }
+        }
+        else if(nums_FD==4){
+            if(r_FD==1){
+                r_FD=0;
+            }
+            else if(r_FD==3){
+                r_FD=2;
+            }
+        }
+        else if(nums_FD==3){
+            if(r_FD==1){
+                r_FD=0;
+            }
+            else if(r_FD==2){
+                r_FD=4;
+            }
+            else if(r_FD==3){
+                r_FD=5;
+            }
+        }
+        else if(nums_FD==2){
+            if(r_FD==0){
+                r_FD=4;
+            }
+            else if(r_FD==1){
+                r_FD=5;
+            }
+            else if(r_FD==2){
+                r_FD=4;
+            }
+            else if(r_FD==3){
+                r_FD=5;
+            }
+        }
+        else if(nums_FD==1){
+            r_FD=4;
+        }
+        //选完了，违反第r_FD个FD
+        vector<int> is_in_CC;
+        auto it_fd0=find(is_conflict_fd0.begin(),is_conflict_fd0.end(),make_pair(ti,tj));
+        if(it_fd0!=is_conflict_fd0.end()){
+            //ti和tj关于fd0已经冲突了
+            auto it_fd1=find(is_conflict_fd1.begin(),is_conflict_fd1.end(),make_pair(ti,tj));
+            if(it_fd1!=is_conflict_fd1.end()){
+                //ti和tj关于fd1已经冲突了
+                auto it_fd2=find(is_conflict_fd2.begin(),is_conflict_fd2.end(),make_pair(ti,tj));
+                if(it_fd2!=is_conflict_fd2.end()){
+                    //ti和tj关于fd2已经冲突了
+                    auto it_fd3=find(is_conflict_fd3.begin(),is_conflict_fd3.end(),make_pair(ti,tj));
+                    if(it_fd3!=is_conflict_fd3.end()){
+                        //ti和tj关于fd3已经冲突了
+                        auto it_fd4=find(is_conflict_fd4.begin(),is_conflict_fd4.end(),make_pair(ti,tj));
+                        if(it_fd4!=is_conflict_fd4.end()){
+                            //ti和tj关于fd4已经冲突了
+                            auto it_fd5=find(is_conflict_fd5.begin(),is_conflict_fd5.end(),make_pair(ti,tj));
+                            if(it_fd5!=is_conflict_fd5.end()){
+                                //ti和tj关于fd5已经冲突了
+                                edge_count--;
+                            }
+                            else{
+                                //ti和tj关于fd5没有冲突过
+                                candidate_dirty_tuple[tj][0]=candidate_dirty_tuple[ti][0];
+                                //candidate_dirty_tuple[tj][7]+"r";
+                                //candidate_dirty_tuple[tj][8]+"r";
+                            }
+                        }
+                        else{
+                            //ti和tj关于fd4没有冲突过
+                            candidate_dirty_tuple[tj][0]=candidate_dirty_tuple[ti][0];
+                            //candidate_dirty_tuple[tj][7]+"r";
+                        }
+                    }
+                    else{
+                        //ti和tj关于fd3没有冲突过
+                        candidate_dirty_tuple[tj][0]=candidate_dirty_tuple[ti][0];
+                        //candidate_dirty_tuple[tj][5]+"r";
+                    }
+                }
+                else{
+                    //ti和tj关于fd2没有冲突过
+                    candidate_dirty_tuple[tj][0]=candidate_dirty_tuple[ti][0];
+                    //candidate_dirty_tuple[tj][4]+"r";
+                }
+            }
+            else{
+                //ti和tj关于fd1没有冲突过
+                candidate_dirty_tuple[tj][0]=candidate_dirty_tuple[ti][0];
+                //candidate_dirty_tuple[tj][2]+"r";
+            }
+        }
+        else{
+            //ti和tj关于fd0没有冲突过
+            candidate_dirty_tuple[tj][0]=candidate_dirty_tuple[ti][0];
+            //candidate_dirty_tuple[tj][1]+"r";
+        }
+        edge_count++;
+    }
+    for(int i=0;i<candidate_dirty_tuple.size();++i){
+        fprintf(fp,"%s ,",candidate_dirty_tuple[i][0].c_str());
+        fprintf(fp,"%s ,",candidate_dirty_tuple[i][1].c_str());
+        fprintf(fp,"%s ,",candidate_dirty_tuple[i][2].c_str());
+        fprintf(fp,"%s ,",candidate_dirty_tuple[i][3].c_str());
+        fprintf(fp,"%s ,",candidate_dirty_tuple[i][4].c_str());
+        fprintf(fp,"%s ,",candidate_dirty_tuple[i][5].c_str());
+        fprintf(fp,"%s ,",candidate_dirty_tuple[i][6].c_str());
+        fprintf(fp,"%s ,",candidate_dirty_tuple[i][7].c_str());
+        fprintf(fp,"%s\n",candidate_dirty_tuple[i][8].c_str());
+        int r=rand();//生成随机数(0,3]
+        double t=r%3+1+xiaoshu[turn];
+        if(t>3||t<0) fprintf(fp_weight,"%.1f\n",1.5);
+        else fprintf(fp_weight,"%.1f\n",r%3+1+xiaoshu[turn]);
+        turn ++;
+        if(turn>=10){
+            turn =0;
+        }
+    }
+    fclose(fp);
+    fclose(fp_weight);
+}
+/*--------------------以上pollute数据----------------*/
+
+/*--------------------以下pollute数据----------------*/
+void Generator::pollute_flight_on_hadoop(vector<Tuple> &tuple,int size,double err_rate,string result_path,int nums_FD,int p){
+    //FILE *fp;
+    //FILE *fp_weight;
+    size_t nums=attrs_name.size();
+    string postfix=".csv";
+    string weight_postfix=".txt";
+    string jmy="jmy_pollute_on_hadoop";
+    string middle=to_string(size);
+    string back=to_string(err_rate);
+    string result_tuple_path=result_path+middle+jmy+back+postfix;
+    string result_weight_path=result_path+middle+jmy+back+"weight"+weight_postfix;
+    
+    //fp = fopen(result_tuple_path.data(), "w");
+    //fp_weight = fopen(result_weight_path.data(), "w");
+    //if(fp==NULL) cout<<"大失败！"<<endl;
+    //else cout<<"大成功！"<<endl;
+    vector<double> xiaoshu={0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9};
+    int turn=0;
+    int n=1;
+    //for(n=1;n<nums-1;++n){
+      //  fprintf(fp,"%s ,",attrs_name[n].c_str());
+    //}
+    cout<<attrs_name[n].c_str()<<endl;
+    //fprintf(fp,"%s\n",attrs_name[n].c_str());
+    int err_tuples=size*err_rate;
+    unordered_map<string, int> hm;//hm中存的是前size个元组中出现的flight名称
+    unordered_map<string, string> locate_scheduled_dept;//记录flight对应的scheduled_dept
+    unordered_map<string, string> locate_actual_dept;//记录flight对应的actual_dept
+    unordered_map<string, string> locate_scheduled_arrival;//记录flight对应的scheduled_arrival
+    unordered_map<string, string> locate_actual_arrival;//记录flight对应的actual_arrival
+    unordered_map<string, string> locate_dept_gate;//记录flight对应的actual_arrival
+    unordered_map<string, string> locate_arrival_gate;//记录flight对应的actual_arrival
+    
+    for(int y=0;y<50000;++y){
+        hm[Trim(tuple[y].attrs_value[1]).substr(11,24)]++;
+        hm[Trim(tuple[y].attrs_value[1]).substr(11,24)+"r"]++;
+        if(Trim(tuple[y].attrs_value[2])!=""){
+            locate_scheduled_dept[Trim(tuple[y].attrs_value[1])]=Trim(tuple[y].attrs_value[2]);
+        }
+        if(Trim(tuple[y].attrs_value[3])!=""){
+            locate_actual_dept[Trim(tuple[y].attrs_value[1])]=Trim(tuple[y].attrs_value[3]);
+        }
+        if(Trim(tuple[y].attrs_value[4])!=""){
+            locate_dept_gate[Trim(tuple[y].attrs_value[1])]=Trim(tuple[y].attrs_value[4]);
+        }
+        if(Trim(tuple[y].attrs_value[5])!=""){
+            locate_scheduled_arrival[Trim(tuple[y].attrs_value[1])]=Trim(tuple[y].attrs_value[5]);
+        }
+        if(Trim(tuple[y].attrs_value[6])!=""){
+            locate_actual_arrival[Trim(tuple[y].attrs_value[1])]=Trim(tuple[y].attrs_value[6]);
+        }
+        if(Trim(tuple[y].attrs_value[7])!=""){
+            locate_arrival_gate[Trim(tuple[y].attrs_value[1])]=Trim(tuple[y].attrs_value[7]);
+        }
+    }
+    
+    vector<string> locate_airline={"United Airlines","Delta Air Lines","Southwest","Alask Airlines","Spirit Airlines","Allegiant Air LLC","JetBlue Airways","Denver Air Connection","American Airlines","Cape Air","Frontier Airlines","Boutique Air","Grant Aviation","Avelo Airlines","Breeze Airways","Hawaiian Airlines","Sun Country Airlines","Air Wisconsin","American Eagle","CommutAir","Contour Airlines","Elite Airways","Endeavor Air","Envoy Air","GoJet Airlines","Horizon Air","Mesa Airlines","Piedmont Airlines","PSA Airlines","Republic Airways","Silver Airways","SkyWest Airlines","Advanced Air","Air Choice One","Air Sunshine","Bering Air","Boutique Air","Everts Air","Grand Canyon Airlines","Hageland Aviation Services","Island Airways","JSX","Kenmore Air","Key Lime Air","Mokulele Airlines","San Juan Airlines","Servant Air","Surf Air","Taquan Air","Utah Airways"};
+    
+    vector<string> locate_destination={"AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY","DC","PR","VI"};
+    
+    size_t nums_scheduled_dept=locate_scheduled_dept.size();
+    size_t nums_actual_dept=locate_actual_dept.size();
+    size_t nums_scheduled_arrival=locate_scheduled_arrival.size();
+    size_t nums_actual_arrival=locate_actual_arrival.size();
+    size_t nums_dept_gate=locate_dept_gate.size();
+    size_t nums_arrival_gate=locate_arrival_gate.size();
+    size_t nums_locate_airline=locate_airline.size();
+    size_t nums_locate_destination=locate_destination.size();
+    auto it_for_flight=hm.begin();
+    cout<<"hm.size():"<<hm.size()<<endl;
+    int start_date=20210100;
+    char str[9];
+    sprintf(str,"%d",start_date);
+    tuple.clear();//很重要!!!!!!
+    //vector<vector<string> > normal_tuple;
+    for(int i=0;i<size;i++){
+        Tuple temp_tuple;
+        temp_tuple.tuple_id=i;
+        int j=0;
+        for(j=0;j<nums-1;++j){
+            if(j==0){//flight
+                if(it_for_flight!=hm.end()){
+                    if(strcmp(str,"20210930")<0){
+                        if(str[5]-'0'==1||str[5]-'0'==3||str[5]-'0'==5||str[5]-'0'==7||str[5]-'0'==8){
+                            if((str[6]-'0')*10+(str[7]-'0')>30){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20210000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                        else if(str[5]-'0'==2){
+                            if((str[6]-'0')*10+(str[7]-'0')>27){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20210000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                        else if(str[5]-'0'==4||str[5]-'0'==6||str[5]-'0'==9){
+                            if((str[6]-'0')*10+(str[7]-'0')>29){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20210000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                    }
+                    else if(strcmp(str,"20210930")==0){
+                        start_date=20211001;
+                        sprintf(str,"%d",start_date);
+                    }
+                    else if(strcmp(str,"20210930")>0){
+                        if(str[5]-'0'==0||str[5]-'0'==2){
+                            if((str[6]-'0')*10+(str[7]-'0')>30){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20211000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                        else if(str[5]-'0'==1){
+                            if((str[6]-'0')*10+(str[7]-'0')>29){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20211000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                    }
+                    if(strcmp(str,"20211301")==0){
+                        it_for_flight++;
+                        start_date=20210101;
+                        sprintf(str,"%d",start_date);
+                    }
+                    //fprintf(fp,"%s ,",(str+it_for_flight->first).c_str());
+                    temp_tuple.attrs_value.push_back(str+it_for_flight->first);
+                    //temp_normal_tuple.push_back();
+                }
+                else{
+                    //fprintf(fp,"%s ,","sss");
+                    temp_tuple.attrs_value[0]="sss";
+                    //temp_normal_tuple.push_back("sss");
+                }
+            }
+            else if(j==1){//scheduled_dept
+                //srand((int)time(0));
+                int j=rand();//生成随机数[0,nums_scheduled_dept-1]
+                auto it=locate_scheduled_dept.begin();
+                for(int h=0;h<j%nums_scheduled_dept;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                temp_tuple.attrs_value.push_back(it->second);
+                //temp_normal_tuple.push_back(it->second.c_str());
+            }
+            else if(j==2){//actual_dept
+                int j=rand();//生成随机数[0,nums_actual_dept-1]
+                auto it=locate_actual_dept.begin();
+                for(int h=0;h<j%nums_actual_dept;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                temp_tuple.attrs_value.push_back(it->second);
+                //temp_normal_tuple.push_back(it->second.c_str());
+            }
+            else if(j==3){//dept_gate
+                int j=rand();//生成随机数[0,nums_dept_gate-1]
+                auto it=locate_dept_gate.begin();
+                for(int h=0;h<j%nums_dept_gate;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                temp_tuple.attrs_value.push_back(it->second);
+                //temp_normal_tuple.push_back(it->second.c_str());
+            }
+            else if(j==4){//scheduled_arrival
+                int j=rand();//生成随机数[0,nums_scheduled_arrival-1]
+                auto it=locate_scheduled_arrival.begin();
+                for(int h=0;h<j%nums_scheduled_arrival;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                temp_tuple.attrs_value.push_back(it->second);
+                //temp_normal_tuple.push_back(it->second.c_str());
+            }
+            else if(j==5){//actual_arrival
+                int j=rand();//生成随机数[0,nums_actual_arrival-1]
+                auto it=locate_actual_arrival.begin();
+                for(int h=0;h<j%nums_actual_arrival;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                temp_tuple.attrs_value.push_back(it->second);
+                //temp_normal_tuple.push_back(it->second.c_str());
+            }
+            else if(j==6){//arrival_gate
+                int j=rand();//生成随机数[0,nums_arrival_gate-1]
+                auto it=locate_arrival_gate.begin();
+                for(int h=0;h<j%nums_arrival_gate;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                temp_tuple.attrs_value.push_back(it->second);
+                //temp_normal_tuple.push_back(it->second.c_str());
+            }
+            else if(j==7){//airline
+                int j=rand();//生成随机数[0,nums_locate_airline-1]
+                auto it=locate_airline.begin();
+                for(int h=0;h<j%nums_locate_airline;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",(*it).c_str());
+                temp_tuple.attrs_value.push_back((*it));
+                //temp_normal_tuple.push_back((*it).c_str());
+            }
+            else if(j==8){//destination
+                int j=rand();//生成随机数[0,nums_locate_destination-1]
+                auto it=locate_destination.begin();
+                for(int h=0;h<j%nums_locate_destination;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s\n",(*it).c_str());
+                temp_tuple.attrs_value.push_back((*it));
+                //temp_normal_tuple.push_back((*it).c_str());
+            }
+        }
+        //hm[tuple[i].attrs_value[1]]--;
+        if(i<err_tuples){
+            int r=rand();//生成随机数(0,3]
+            double t=r%3+1+xiaoshu[turn];
+            if(t>3||t<0){
+                //fprintf(fp_weight,"%.1f\n",1.5);
+                temp_tuple.tuple_weight=1.5;
+            }
+            else{
+                //fprintf(fp_weight,"%.1f\n",r%3+1+xiaoshu[turn]);
+                temp_tuple.tuple_weight=r%3+1+xiaoshu[turn];
+            }
+            turn++;
+            if(turn>=10){
+                turn =0;
+            }
+        }
+        else{
+            int r=rand();//生成随机数[3,9]
+            double t=r%7+3+xiaoshu[turn];
+            if(t>=10||t<0){
+                //fprintf(fp_weight,"%.1f\n",5.0);
+                temp_tuple.tuple_weight=5.0;
+            }
+            else{
+                //fprintf(fp_weight,"%.1f\n",r%7+3+xiaoshu[turn]);
+                temp_tuple.tuple_weight=r%7+3+xiaoshu[turn];
+            }
+            turn++;
+            if(turn>=10){
+                turn =0;
+            }
+        }
+        temp_tuple.s_time="-";
+        temp_tuple.e_time="-";
+        source_tuple.push_back(temp_tuple);
+        //normal_tuple.push_back(temp_normal_tuple);
+    }
+    
+    //20220506生成冲突的连通分量，重点是在改这里以下！！！！！
+    //start_date=20220100;
+    //char str[9];
+    //sprintf(str,"%d",start_date);
+    /*str[0]='2';
+    str[1]='0';
+    str[2]='2';
+    str[3]='2';
+    str[4]='0';
+    str[5]='1';
+    str[6]='0';
+    str[7]='0';
+    str[8]='\0';
+    //vector<vector<string> > candidate_dirty_tuple;
+    int nums_normal_tuple=source_tuple.size();
+    for(int i=0;i<err_tuples;i++){
+        Tuple temp_tuple;
+        temp_tuple.tuple_id=nums_normal_tuple+i;
+        //vector<string> temp_candidate_dirty_tuple;
+        int j=0;
+        for(j=0;j<nums-1;++j){
+            if(j==0){//flight
+                if(it_for_flight!=hm.end()){
+                    if(strcmp(str,"20220930")<0){
+                        if(str[5]-'0'==1||str[5]-'0'==3||str[5]-'0'==5||str[5]-'0'==7||str[5]-'0'==8){
+                            if((str[6]-'0')*10+(str[7]-'0')>30){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20220000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                        else if(str[5]-'0'==2){
+                            if((str[6]-'0')*10+(str[7]-'0')>27){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20220000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                        else if(str[5]-'0'==4||str[5]-'0'==6||str[5]-'0'==9){
+                            if((str[6]-'0')*10+(str[7]-'0')>29){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20220000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                    }
+                    else if(strcmp(str,"20220930")==0){
+                        start_date=20221001;
+                        sprintf(str,"%d",start_date);
+                    }
+                    else if(strcmp(str,"20220930")>0){
+                        if(str[5]-'0'==0||str[5]-'0'==2){
+                            if((str[6]-'0')*10+(str[7]-'0')>30){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20221000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                        else if(str[5]-'0'==1){
+                            if((str[6]-'0')*10+(str[7]-'0')>29){
+                                str[5]=str[5]+1;
+                                str[6]='0';
+                                str[7]='1';
+                                start_date=20221000+(str[5]-'0')*100+(str[6]-'0')*10+(str[7]-'0');
+                            }
+                            else{
+                                start_date++;
+                                sprintf(str,"%d",start_date);
+                            }
+                        }
+                    }
+                    if(strcmp(str,"20221301")==0){
+                        it_for_flight++;
+                        start_date=20220101;
+                        sprintf(str,"%d",start_date);
+                    }
+                    //fprintf(fp,"%s ,",(str+it_for_flight->first).c_str());
+                    //temp_candidate_dirty_tuple.push_back((str+it_for_flight->first).c_str());
+                    temp_tuple.attrs_value[0]=(str+it_for_flight->first).c_str();
+                }
+                else{
+                    //fprintf(fp,"%s ,","sss");
+                    //temp_candidate_dirty_tuple.push_back("sss");
+                    temp_tuple.attrs_value[0]="sss";
+                }
+            }
+            else if(j==1){//scheduled_dept
+                //srand((int)time(0));
+                int j=rand();//生成随机数[0,nums_scheduled_dept-1]
+                auto it=locate_scheduled_dept.begin();
+                for(int h=0;h<j%nums_scheduled_dept;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                //temp_candidate_dirty_tuple.push_back(it->second.c_str());
+                temp_tuple.attrs_value[1]=it->second.c_str();
+            }
+            else if(j==2){//actual_dept
+                int j=rand();//生成随机数[0,nums_actual_dept-1]
+                auto it=locate_actual_dept.begin();
+                for(int h=0;h<j%nums_actual_dept;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                //temp_candidate_dirty_tuple.push_back(it->second.c_str());
+                temp_tuple.attrs_value[2]=it->second.c_str();
+            }
+            else if(j==3){//dept_gate
+                int j=rand();//生成随机数[0,nums_dept_gate-1]
+                auto it=locate_dept_gate.begin();
+                for(int h=0;h<j%nums_dept_gate;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                //temp_candidate_dirty_tuple.push_back(it->second.c_str());
+                temp_tuple.attrs_value[3]=it->second.c_str();
+            }
+            else if(j==4){//scheduled_arrival
+                int j=rand();//生成随机数[0,nums_scheduled_arrival-1]
+                auto it=locate_scheduled_arrival.begin();
+                for(int h=0;h<j%nums_scheduled_arrival;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                //temp_candidate_dirty_tuple.push_back(it->second.c_str());
+                temp_tuple.attrs_value[4]=it->second.c_str();
+            }
+            else if(j==5){//actual_arrival
+                int j=rand();//生成随机数[0,nums_actual_arrival-1]
+                auto it=locate_actual_arrival.begin();
+                for(int h=0;h<j%nums_actual_arrival;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                //temp_candidate_dirty_tuple.push_back(it->second.c_str());
+                temp_tuple.attrs_value[5]=it->second.c_str();
+            }
+            else if(j==6){//arrival_gate
+                int j=rand();//生成随机数[0,nums_arrival_gate-1]
+                auto it=locate_arrival_gate.begin();
+                for(int h=0;h<j%nums_arrival_gate;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",it->second.c_str());
+                //temp_candidate_dirty_tuple.push_back(it->second.c_str());
+                temp_tuple.attrs_value[6]=it->second.c_str();
+            }
+            else if(j==7){//airline
+                int j=rand();//生成随机数[0,nums_locate_airline-1]
+                auto it=locate_airline.begin();
+                for(int h=0;h<j%nums_locate_airline;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s ,",(*it).c_str());
+                //temp_candidate_dirty_tuple.push_back((*it).c_str());
+                temp_tuple.attrs_value[7]=(*it).c_str();
+            }
+            else if(j==8){//destination
+                int j=rand();//生成随机数[0,nums_locate_destination-1]
+                auto it=locate_destination.begin();
+                for(int h=0;h<j%nums_locate_destination;h++){
+                    it++;
+                }
+                //fprintf(fp,"%s\n",(*it).c_str());
+                //temp_candidate_dirty_tuple.push_back((*it).c_str());
+                temp_tuple.attrs_value[8]=(*it).c_str();
+            }
+        }
+        //hm[tuple[i].attrs_value[1]]--;
+        
+        int r=rand();//生成随机数(0,3]
+        double t=r%3+1+xiaoshu[turn];
+        if(t>3||t<0){
+            //fprintf(fp_weight,"%.1f\n",1.5);
+            temp_tuple.tuple_weight=1.5;
+        }
+        else{
+            //fprintf(fp_weight,"%.1f\n",r%3+1+xiaoshu[turn]);
+            temp_tuple.tuple_weight=r%3+1+xiaoshu[turn];
+        }
+        turn++;
+        if(turn>=10){
+            turn =0;
+        }
+        temp_tuple.s_time="-";
+        temp_tuple.e_time="-";
+        source_tuple.push_back(temp_tuple);
+        //candidate_dirty_tuple.push_back(temp_candidate_dirty_tuple);
+    }*/
+    //以上生成了candidate_dirty_tuple
+    
+    /*cout<<"candidate_dirty_tuple.size()"<<candidate_dirty_tuple.size()<<endl;
+    for(int i=0;i<10;++i){
+        cout<<candidate_dirty_tuple[i][0]<<endl;
+        cout<<candidate_dirty_tuple[i][1]<<endl;
+        cout<<candidate_dirty_tuple[i][2]<<endl;
+        cout<<candidate_dirty_tuple[i][3]<<endl;
+        cout<<candidate_dirty_tuple[i][4]<<endl;
+        cout<<candidate_dirty_tuple[i][5]<<endl;
+        cout<<candidate_dirty_tuple[i][6]<<endl;
+        cout<<candidate_dirty_tuple[i][7]<<endl;
+        cout<<candidate_dirty_tuple[i][8]<<endl;
+    }*/
+    
+    //下面给他们连边
+    vector<pair<int,int>> is_conflict_fd0;
+    vector<pair<int,int>> is_conflict_fd1;
+    vector<pair<int,int>> is_conflict_fd2;
+    vector<pair<int,int>> is_conflict_fd3;
+    vector<pair<int,int>> is_conflict_fd4;
+    vector<pair<int,int>> is_conflict_fd5;
+    
+    int edge_count=0;
+    //插入10000条冲突边
+    while(edge_count<p){
+        int r=rand();//[a,b]之间的整数：(rand() % (b-a+1))+ a
+        int ti=(r% (err_tuples-1+1));
+        r=rand();
+        int tj=(r % (err_tuples-1+1));
+        while(ti==tj){
+            r=rand();
+            tj=(r % (err_tuples-1+1));
+        }
+        //生成两个不同的，[0,nums_ditry_tuple]之间的int型整数ti和tj
+        r=rand();//生成随机数[0,5]，决定违反哪个FD
+        int r_FD=r%6;
+        //违反第r_FD个FD
+        if(nums_FD==6){}
+        else if(nums_FD==5){
+            if(r_FD==3){
+                r_FD=0;
+            }
+        }
+        else if(nums_FD==4){
+            if(r_FD==1){
+                r_FD=0;
+            }
+            else if(r_FD==3){
+                r_FD=2;
+            }
+        }
+        else if(nums_FD==3){
+            if(r_FD==1){
+                r_FD=0;
+            }
+            else if(r_FD==2){
+                r_FD=4;
+            }
+            else if(r_FD==3){
+                r_FD=5;
+            }
+        }
+        else if(nums_FD==2){
+            if(r_FD==0){
+                r_FD=4;
+            }
+            else if(r_FD==1){
+                r_FD=5;
+            }
+            else if(r_FD==2){
+                r_FD=4;
+            }
+            else if(r_FD==3){
+                r_FD=5;
+            }
+        }
+        else if(nums_FD==1){
+            r_FD=4;
+        }
+        //选完了，违反第r_FD个FD
+        auto it_fd0=find(is_conflict_fd0.begin(),is_conflict_fd0.end(),make_pair(ti,tj));
+        if(it_fd0!=is_conflict_fd0.end()){
+            //ti和tj关于fd0已经冲突了
+            auto it_fd1=find(is_conflict_fd1.begin(),is_conflict_fd1.end(),make_pair(ti,tj));
+            if(it_fd1!=is_conflict_fd1.end()){
+                //ti和tj关于fd1已经冲突了
+                auto it_fd2=find(is_conflict_fd2.begin(),is_conflict_fd2.end(),make_pair(ti,tj));
+                if(it_fd2!=is_conflict_fd2.end()){
+                    //ti和tj关于fd2已经冲突了
+                    auto it_fd3=find(is_conflict_fd3.begin(),is_conflict_fd3.end(),make_pair(ti,tj));
+                    if(it_fd3!=is_conflict_fd3.end()){
+                        //ti和tj关于fd3已经冲突了
+                        auto it_fd4=find(is_conflict_fd4.begin(),is_conflict_fd4.end(),make_pair(ti,tj));
+                        if(it_fd4!=is_conflict_fd4.end()){
+                            //ti和tj关于fd4已经冲突了
+                            auto it_fd5=find(is_conflict_fd5.begin(),is_conflict_fd5.end(),make_pair(ti,tj));
+                            if(it_fd5!=is_conflict_fd5.end()){
+                                //ti和tj关于fd5已经冲突了
+                                edge_count--;
+                            }
+                            else{
+                                //ti和tj关于fd5没有冲突过
+                                source_tuple[tj].attrs_value[0]=source_tuple[ti].attrs_value[0];
+                                //candidate_dirty_tuple[tj][0]=candidate_dirty_tuple[ti][0];
+                                //candidate_dirty_tuple[tj][7]+"r";
+                                //candidate_dirty_tuple[tj][8]+"r";
+                            }
+                        }
+                        else{
+                            //ti和tj关于fd4没有冲突过
+                            source_tuple[tj].attrs_value[0]=source_tuple[ti].attrs_value[0];
+                            //candidate_dirty_tuple[tj][0]=candidate_dirty_tuple[ti][0];
+                            //candidate_dirty_tuple[tj][7]+"r";
+                        }
+                    }
+                    else{
+                        //ti和tj关于fd3没有冲突过
+                        source_tuple[tj].attrs_value[0]=source_tuple[ti].attrs_value[0];
+                        //candidate_dirty_tuple[tj][0]=candidate_dirty_tuple[ti][0];
+                        //candidate_dirty_tuple[tj][5]+"r";
+                    }
+                }
+                else{
+                    //ti和tj关于fd2没有冲突过
+                    source_tuple[tj].attrs_value[0]=source_tuple[ti].attrs_value[0];
+                    //candidate_dirty_tuple[tj][0]=candidate_dirty_tuple[ti][0];
+                    //candidate_dirty_tuple[tj][4]+"r";
+                }
+            }
+            else{
+                //ti和tj关于fd1没有冲突过
+                source_tuple[tj].attrs_value[0]=source_tuple[ti].attrs_value[0];
+                //candidate_dirty_tuple[tj][0]=candidate_dirty_tuple[ti][0];
+                //candidate_dirty_tuple[tj][2]+"r";
+            }
+        }
+        else{
+            //ti和tj关于fd0没有冲突过
+            source_tuple[tj].attrs_value[0]=source_tuple[ti].attrs_value[0];
+            //candidate_dirty_tuple[tj][0]=candidate_dirty_tuple[ti][0];
+            //candidate_dirty_tuple[tj][1]+"r";
+        }
+        edge_count++;
+    }
+    /*for(int i=0;i<candidate_dirty_tuple.size();++i){
+        fprintf(fp,"%s ,",candidate_dirty_tuple[i][0].c_str());
+        fprintf(fp,"%s ,",candidate_dirty_tuple[i][1].c_str());
+        fprintf(fp,"%s ,",candidate_dirty_tuple[i][2].c_str());
+        fprintf(fp,"%s ,",candidate_dirty_tuple[i][3].c_str());
+        fprintf(fp,"%s ,",candidate_dirty_tuple[i][4].c_str());
+        fprintf(fp,"%s ,",candidate_dirty_tuple[i][5].c_str());
+        fprintf(fp,"%s ,",candidate_dirty_tuple[i][6].c_str());
+        fprintf(fp,"%s ,",candidate_dirty_tuple[i][7].c_str());
+        fprintf(fp,"%s\n",candidate_dirty_tuple[i][8].c_str());
+        int r=rand();//生成随机数(0,3]
+        double t=r%3+1+xiaoshu[turn];
+        if(t>3||t<0) fprintf(fp_weight,"%.1f\n",1.5);
+        else fprintf(fp_weight,"%.1f\n",r%3+1+xiaoshu[turn]);
+        turn ++;
+        if(turn>=10){
+            turn =0;
+        }
+    }*/
+    //fclose(fp);
+    //fclose(fp_weight);
+}
+/*--------------------以上pollute数据----------------*/
+
+

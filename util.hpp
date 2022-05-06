@@ -126,6 +126,7 @@ class Generator{
 public:
     vector<string> attrs_name;
     vector<Tuple> source_tuple;
+    //vector<Tuple> hadoop_pollute_tuple;
     vector<FD> fun_denp;
     vector<Tuple> normalized_tuple;
     vector<Tuple> left_tuple;
@@ -223,6 +224,8 @@ public:
     double calculate_opt_r_Greedy();
     double print_error_percentage(vector<Tuple> &tuple);
     void pollute_flight(vector<Tuple> &tuple,int size,double err_rate,string result_tuple_path,int nums_FD);
+    void pollute_flight_graph(vector<Tuple> &tuple,int size,double err_rate,string result_tuple_path,int nums_FD);
+    void pollute_flight_on_hadoop(vector<Tuple> &tuple,int size,double err_rate,string result_path,int nums_FD,int p);//这个函数之后，gen.souce_tuple里就是新的pollute数据了！
     void write_soft_result(char* soft_repair_result_path);
     //void random_tuple_weight(int size,double err_rate);
     vector<vector<int> > lp_sc(vector<int> X, vector<vector<int> > F);

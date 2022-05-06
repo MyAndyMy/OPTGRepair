@@ -272,8 +272,10 @@ void soft_repair(char* tuple_path,char* tuple_weight_path,char* fd_path,char* fd
     }
     //gen.pollute_flight(gen.source_tuple,32000,0.05,"/Users/andy/Documents/Data/Flight/four_FDs/fli4ght",4);
     */
-    gen.pollute_flight(gen.source_tuple,10000,0.05,"/Users/andy/Documents/Data/Flight/test_vector/",4);
+    //gen.pollute_flight(gen.source_tuple,10000,0.05,"/Users/andy/Documents/Data/Flight/test_vector/",4);
     /*pollute_flight_data*/
+    
+    //gen.pollute_flight_graph(gen.source_tuple,1000,0.05,"/Users/andy/Documents/Data/Flight/test_graph/",6);
     
     /*--------------------以下加载FD--------------------*/
     gen.load_fd_file(fd_path);//加载FD到gen.fun_denp
@@ -1243,7 +1245,318 @@ void soft_repair_test(char* tuple_path,char* tuple_weight_path,char* fd_path,cha
         }
         
 }
+void test_pollte_data_on_hadooop(char * tuple_path, char* fd_path,char* result_path){
+    clock_t start,end;//计算时间
+    SoftResult temp_SR;
+    /*--------------------以下加载元组--------------------*/
+    char ch[]="r";
+    Generator gen(tuple_path,ch);
+    gen.load_tuple_weight("",gen.source_tuple);
+    gen.print_attrs_name();//输出relational data全部属性名称
+    /*--------------------以上加载元组--------------------*/
+    /*--------------------以下加载FD--------------------*/
+    gen.load_fd_file(fd_path);//加载FD到gen.fun_denp
+    //gen.load_fd_weight("",gen.fun_denp);//加载fd's weight,当第一个参数为""时,默认每个元组的FD都是w_conflict
+    gen.load_fd_weight("",gen.fun_denp);//加载fd's weight到到gen.fun_denp
+    cout<<"FD数量:"<<gen.number_of_fds()<<endl;
+    gen.print_every_fds();//输出全部FD
+    /*--------------------以上加载FD--------------------*/
+    
+    int p=1000*0.06*5;
+    gen.pollute_flight_on_hadoop(gen.source_tuple,1000,0.06,"",4,p);
+    
+    //在此给每个FD随机赋值哦！
+    
+    cout<<endl;
+    
+    /*--------------------以下构建原始元组的冲突对--------------------*/
+    start=clock();
+    gen.construct_conflict(gen.source_tuple,gen.relationship_G,ch);//将source_tuple的冲突对关系存储在relationship_G中
+    //gen.random_tuple_weight(gen.source_tuple);
+    end=clock();
+    cout<<"原始元组构建冲突对的时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
+    /*--------------------以上构建原始元组的冲突对--------------------*/
+    
+    cout<<endl;
+    
+    /*--------------------以下打印元组相关信息--------------------*/
+    cout<<"元组数量:"<<gen.number_of_tuples(gen.source_tuple)<<endl;
+    temp_SR.nums_tuples=gen.number_of_tuples(gen.source_tuple);
+    //cout<<"temp_SR.nums_tuples:"<<temp_SR.nums_tuples<<endl;
+    cout<<"元组中参与冲突的元组数量:"<<gen.number_of_tuples_in_conflict(gen.source_tuple)<<endl;
+    temp_SR.tuple_in_conflicts=gen.number_of_tuples_in_conflict(gen.source_tuple);
+    //cout<<"temp_SR.tuple_in_conflicts:"<<temp_SR.tuple_in_conflicts<<endl;
+    cout<<"冲突对儿数量:"<<gen.number_of_conflicts(gen.relationship_G)<<endl;
+    temp_SR.nums_conflicts=gen.number_of_conflicts(gen.relationship_G);
+    //cout<<"temp_SR.nums_conflicts:"<<temp_SR.nums_conflicts<<endl;
+    cout<<"元组错误率:"<<gen.print_error_percentage(gen.source_tuple)<<endl;
+    temp_SR.error_rate=gen.print_error_percentage(gen.source_tuple);
+    /*--------------------以上打印元组相关信息--------------------*/
+    
+    cout<<endl;
+    
+    /*--------------------以下对source_tuple和relationship_G进行G-repair--------------------*/
+    start=clock();
+    gen.lp_solver_G_repair(gen.source_tuple,gen.relationship_G);
+    end=clock();
+    cout<<"soft repair的G_repair的时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
+    temp_SR.Grepair_time=(double)(end - start)/CLOCKS_PER_SEC;
+    if(gen.effectiveness_of_solution_G(gen.relationship_G)==true)
+        cout<<"G_repair解有效,"<<"w>0时,y_i,j=min(xi+xj,1);w<0时,y_i,j=max(xi,xj)"<<endl;
+    else cout<<"G_repair解无效"<<endl;
+    start=clock();
+    gen.rounding(gen.source_tuple,gen.relationship_G);//为normalized_tuple的x和relationship_G的y做舍入
+    end=clock();
+    cout<<"soft repair的G_repair的rounding时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
+    cout<<"soft repair的G_repair的分数最优解为:"<<gen.calculate_opt_f_G(gen.source_tuple, gen.relationship_G)<<endl;
+    temp_SR.Grepair_fopt=gen.calculate_opt_f_G(gen.source_tuple, gen.relationship_G);
+    cout<<"soft repair的G_repair的整数近似最优解为:"<<gen.calculate_opt_r_G(gen.source_tuple, gen.relationship_G)<<endl;
+    double G_repair_ropt=gen.calculate_opt_r_G(gen.source_tuple, gen.relationship_G);
+    temp_SR.Grepair_ropt=gen.calculate_opt_r_G(gen.source_tuple, gen.relationship_G);
+    gen.construct_left_tuple(gen.source_tuple);//把留在repair中的元组放到gen.left_tuple中
+    cout<<"soft repair的G_repair留下的元组个数:"<<gen.number_of_tuples(gen.left_tuple)<<endl;
+    gen.construct_left_conflict(gen.left_tuple, gen.relationship_S);
+    temp_SR.Grepair_tleft=gen.number_of_tuples(gen.left_tuple);
+    cout<<"soft repair的G_repair留下的元组冲突对个数:"<<gen.number_of_conflicts(gen.relationship_S)<<endl;
+    temp_SR.Grepair_cleft=gen.number_of_conflicts(gen.relationship_S);
+    cout<<"soft repair的G_repair留下的元组冲突对加权和:"<<gen.weighted_left_conflicts(gen.relationship_S)<<endl;
+    temp_SR.Grepair_wcleft=gen.weighted_left_conflicts(gen.relationship_S);
+    gen.left_tuple.clear();
+    gen.relationship_left.clear();
+    gen.relationship_S.clear();
+    /*--------------------以上对source_tuple和relationship_G进行G-repair--------------------*/
+    
+    cout<<endl;
+    
+    /*--------------------以下构造set cover问题的输入U和S1和S2----------------*/
+    start=clock();
+    gen.construct_sets();
+    end=clock();
+    cout<<"构造set cover问题的输入U和S时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
+    
+    /*test
+    for(int i=0;i<gen.U.size();++i){
+        cout<<"test_elements:"<<gen.U[i].t1.tuple_id<<", "<<gen.U[i].t2.tuple_id<<", "<<gen.U[i].fd.fd_id<<endl;
+    }
+    for(int i=0;i<gen.S1.size();++i){
+        cout<<"test_set1:"<<gen.S1[i].t.tuple_id<<endl;
+        cout<<"test_set1_elements:";
+        for(int j=0;j<gen.S1[i].element.size();++j){
+            cout<<gen.S1[i].element[j].t1.tuple_id<<", "<<gen.S1[i].element[j].t2.tuple_id<<", "<<gen.S1[i].element[j].fd.fd_id<<", "<<", weight: "<<gen.S1[i].set_weight<<"----";
+        }
+        cout<<endl;
+    }
+    for(int i=0;i<gen.S2.size();++i){
+        cout<<"test_set2:"<<gen.S2[i].t1.tuple_id<<", "<<gen.S2[i].t2.tuple_id<<", "<<gen.S2[i].fd.fd_id<<endl;
+        cout<<"test_set2_elements:";
+        for(int j=0;j<gen.S2[i].element.size();++j){
+            cout<<gen.S2[i].element[j].t1.tuple_id<<", "<<gen.S2[i].element[j].t2.tuple_id<<", "<<gen.S2[i].element[j].fd.fd_id<<", weight: "<<gen.S2[i].set_weight<<"----";
+        }
+        cout<<endl;
+    }
+    test*/
+    
+    //gen.print_all_info_sc();
+    /*--------------------以上构造set cover问题的输入U和S1和S2----------------*/
+    
+    cout<<endl;
+    
+    /*--------------------以下构造set cover问题的输入vector<int>和vector<vector<int>>----------------*/
+    gen.construct_sc();
+    
+    /*test
+    for(int i=0;i<gen.UU.size();++i){
+        cout<<gen.UU[i]<<endl;
+    }
+    for(int i=0;i<gen.C.size();++i){
+        for(int j=0;j<gen.C[i].size();++j){
+            cout<<gen.C[i][j]<<endl;
+        }
+    }
+    for(int i=0;i<gen.weight_bef.size();++i){
+        cout<<"weight_bef:"<<gen.weight_bef[i].first<<endl;
+    }
+    test*/
+    
+    //gen.print_all_info_sc_int();
+    /*--------------------以上构造set cover问题的输入vector<int>和vector<vector<int>>----------------*/
+    
+    cout<<endl;
+    
+    /*--------------------以下是set cover问题的贪心算法----------------*/
+    gen.clear_source_tuple();
+    vector<int> res;
+    start=clock();
+    /*for(int i=0;i<gen.UU.size();++i){
+        cout<<gen.UU[i]<<endl;
+    }
+    cout<<"hhh"<<endl;
+    for(int i=0;i<gen.C.size();++i){
+        for(int j=0;j<gen.C[i].size();++j){
+            cout<<gen.C[i][j]<<", "<<endl;
+        }
+    }*/
+    //为了求sc_lp而注释
+    res=gen.greedy_sc(gen.UU,gen.C);
+    end=clock();
+    cout<<"soft repair的贪心算法时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
+    temp_SR.Greedy_time=(double)(end - start)/CLOCKS_PER_SEC;
+    /*test
+    for(int i=0;i<res.size();++i){
+        cout<<res[i]<<", ";
+    }
+    */
+    //cout<<"greedy cost:"<<gen.greedy_opt<<endl;
+    
+    //double bef0=0.0;
+    double bef1=0.0;
+    //double aft0=0.0;
+    double aft1=0.0;
+    int num_bef0=0;
+    int num_bef1=0;
+    int num_aft0=0;
+    int num_aft1=0;
+    for(int i=0;i<gen.weight_bef.size();++i){
+        if(gen.weight_bef[i].second==0){
+            num_bef0++;
+        }
+    }
+    for(int i=0;i<gen.weight_bef.size();++i){
+        if(gen.weight_bef[i].second==1){
+            num_bef1++;
+            bef1=bef1+gen.weight_bef[i].first;
+        }
+    }
+    for(int i=0;i<gen.weight_aft.size();++i){
+        if(gen.weight_aft[i].second==0){
+            num_aft0++;
+        }
+    }
+    for(int i=0;i<gen.weight_aft.size();++i){
+        if(gen.weight_aft[i].second==1){
+            num_aft1++;
+            aft1+=gen.weight_aft[i].first;
+        }
+    }
+    
+    cout<<"soft repair的贪心整数近似最优解为:"<<gen.greedy_opt<<endl;
+    temp_SR.Greedy_ropt=gen.greedy_opt;
+    cout<<"soft repair的贪心算法留下的元组个数:"<<num_aft0<<endl;
+    temp_SR.Greedy_tleft=num_aft0;
+    cout<<"soft repair的贪心算法留下的元组冲突对个数:"<<num_bef1-num_aft1<<endl;
+    temp_SR.Greedy_cleft=num_bef1-num_aft1;
+    cout<<"soft repair的贪心算法留下的元组冲突对加权和:"<<bef1-aft1<<endl;
+    temp_SR.Greedy_wcleft=bef1-aft1;
+    gen.SR.push_back(temp_SR);
+    //cout<<"111h"<<bef1<<endl;
+    //cout<<"222h"<<aft1<<endl;
+    /*test*/
+    /*for(int i=0;i<res.size();++i){
+        if(res[i]>0&&res[i]<gen.S1.size()){
+            gen.source_tuple[res[i]].xr=1;
+        }
+    }
+    cout<<"soft repair的贪心整数近似最优解为:"<<gen.greedy_opt<<endl;
+    //cout<<"soft repair的贪心整数近似最优解为:"<<gen.calculate_opt_r_Greedy()<<endl;
+    cout<<"soft repair的贪心算法留下的元组个数:"<<gen.number_of_tuples(gen.left_tuple)<<endl;
+    cout<<"soft repair的贪心算法留下的元组冲突对个数:"<<gen.number_of_conflicts(gen.relationship_S)<<endl;
+    //没错,留下元组的冲突对放在relationship_S中了～！
+    cout<<"soft repair的贪心算法留下的元组冲突对加权和:"<<gen.weighted_left_conflicts(gen.relationship_S)<<endl;*/
+    gen.left_tuple.clear();
+    gen.relationship_left.clear();
+    gen.relationship_S.clear();
+    //为了求sc_lp而注释
+    cout<<gen.greedy_opt<<endl;
+    cout<<G_repair_ropt<<endl;
+    if(gen.greedy_opt<G_repair_ropt){
+        FILE *fp;
+        FILE *fp_weight;
+        string postfix=".csv";
+        string weight_postfix=".txt";
+        string jmy="jmy_pollute_on_hadoop";
+        string middle=to_string(p);
+        //string back=to_string(err_rate);
+        string result_tuple_path=result_path+middle+jmy+postfix;
+        string result_weight_path=result_path+middle+jmy+"weight"+weight_postfix;
+        fp = fopen(result_tuple_path.data(), "w");
+        fp_weight = fopen(result_weight_path.data(), "w");
+        if(fp==NULL) cout<<"大失败！"<<endl;
+        else cout<<"大成功！"<<endl;
+        fprintf(fp,"%s,","flight");
+        fprintf(fp,"%s,","scheduled_dept");
+        fprintf(fp,"%s,","actual_dept");
+        fprintf(fp,"%s,","dept_gate");
+        fprintf(fp,"%s,","scheduled_arrival");
+        fprintf(fp,"%s,","actual_arrival");
+        fprintf(fp,"%s,","arrival_gate");
+        fprintf(fp,"%s,","airline");
+        //cout<<attrs_name[n].c_str()<<endl;
+        fprintf(fp,"%s\n","destination");
+        for(int m=0;m<gen.source_tuple.size();++m){
+            fprintf(fp,"%s,",gen.source_tuple[m].attrs_value[0].c_str());
+            fprintf(fp,"%s,",gen.source_tuple[m].attrs_value[1].c_str());
+            fprintf(fp,"%s,",gen.source_tuple[m].attrs_value[2].c_str());
+            fprintf(fp,"%s,",gen.source_tuple[m].attrs_value[3].c_str());
+            fprintf(fp,"%s,",gen.source_tuple[m].attrs_value[4].c_str());
+            fprintf(fp,"%s,",gen.source_tuple[m].attrs_value[5].c_str());
+            fprintf(fp,"%s,",gen.source_tuple[m].attrs_value[6].c_str());
+            fprintf(fp,"%s,",gen.source_tuple[m].attrs_value[7].c_str());
+            fprintf(fp,"%s\n",gen.source_tuple[m].attrs_value[8].c_str());
+            fprintf(fp_weight,"%.2f\n",gen.source_tuple[m].tuple_weight);
+        }
+        fclose(fp);
+        fclose(fp_weight);
+        string soft="soft";
+        string soft_result_path=result_path+soft+".csv";
+        gen.write_soft_result(soft_result_path.data());
+    }
+    //20220507todo：改GRepair_cost<GRreedy_cost,随机fd_weight，改结果文件名称，体现唯一性，在hadoop上运行
 
+    //
+    /*--------------------以上是set cover问题的贪心算法----------------*/
+    /*for(int i=0;i<gen.UU_lp.size();++i){
+        cout<<gen.UU[i]<<endl;
+    }
+    cout<<"sss"<<endl;
+    for(int i=0;i<gen.C_lp.size();++i){
+        for(int j=0;j<gen.C_lp[i].size();++j){
+            cout<<gen.C_lp[i][j]<<", "<<endl;
+        }
+    }*/
+    
+    vector<vector<int>> res_lp;
+    /*for(int i=0;i<gen.UU.size();++i){
+        cout<<gen.UU[i]<<endl;
+    }
+    cout<<"hhh"<<endl;
+    for(int i=0;i<gen.C.size();++i){
+        for(int j=0;j<gen.C[i].size();++j){
+            cout<<gen.C[i][j]<<", "<<endl;
+        }
+    }*/
+    gen.left_tuple.clear();
+    start=clock();
+    res_lp=gen.lp_sc(gen.UU_lp,gen.C_lp);
+    end=clock();
+    
+    /*test*/
+    cout<<"soft repair set cover留下的元组个数:"<<gen.number_of_tuples(gen.left_tuple)<<endl;
+    gen.construct_left_conflict(gen.left_tuple, gen.relationship_S);
+    cout<<"soft repair set cover留下的元组冲突对个数:"<<gen.number_of_conflicts(gen.relationship_S)<<endl;
+    cout<<"soft repair set cover留下的元组冲突对加权和:"<<gen.weighted_left_conflicts(gen.relationship_S)<<endl;
+    /*test*/
+    
+    gen.sc_lp_time=(double)(end - start)/CLOCKS_PER_SEC;
+    cout<<"soft repair set cover LP 算法时间:"<<(double)(end - start)/CLOCKS_PER_SEC<<endl;
+    cout<<"soft repair set cover LP cost:"<<gen.soft_lp_opt<<endl;
+    cout<<"soft repair set cover LP 被删元组个数:"<<gen.soft_lp_tuple<<endl;
+    cout<<"soft repair set cover LP 被删元组加权和:"<<gen.soft_lp_wtuple<<endl;
+    cout<<"soft repair set cover LP 留下冲突个数:"<<gen.soft_lp_conflict<<endl;
+    cout<<"soft repair set cover LP 留下冲突加权和:"<<gen.soft_lp_wconflict<<endl;
+    //20220503 11:30改到这里！
+    //gen.write_soft_result_lp(result_path_lp);
+    
+}
 int main(int argc, const char * argv[]) {
     cout<<"--------------------temporal db repair--------------------"<<endl;
     char tem_tuple_path[]="/Users/andy/Documents/Data/Emp/Emp100jmy.csv";
@@ -1274,7 +1587,7 @@ int main(int argc, const char * argv[]) {
     
     //soft_repair("/home/hadoop/JMYAndy/Data/Flight/test_vector/10000jmy0.100000.csv","/home/hadoop/JMYAndy/Data/Flight/test_vector/10000jmy0.100000weight.txt","/home/hadoop/JMYAndy/Data/Flight/test_vector/flight_FDs4.txt","/home/hadoop/JMYAndy/Data/Flight/test_vector/flight_FDs_weight4.txt","/home/hadoop/JMYAndy/Data/Flight/test_vector/GRandRr.txt","/home/hadoop/JMYAndy/Data/Flight/test_vector/sc_lp.txt");
     
-    int c=1000;
+    /*int c=1000;
     while(c<1500){
         soft_repair_test("/home/hadoop/JMYAndy/Data/Flight/test_vector/10000jmy0.050000.csv","/home/hadoop/JMYAndy/Data/Flight/test_vector/10000jmy0.050000weight.txt","/home/hadoop/JMYAndy/Data/Flight/test_vector/flight_FDs4.txt","/home/hadoop/JMYAndy/Data/Flight/test_vector/flight_FDs_weight4.txt",1,10,c);
     }
@@ -1283,7 +1596,7 @@ int main(int argc, const char * argv[]) {
     }
     while(c<2500){
         soft_repair_test("/home/hadoop/JMYAndy/Data/Flight/test_vector/10000jmy0.050000.csv","/home/hadoop/JMYAndy/Data/Flight/test_vector/10000jmy0.050000weight.txt","/home/hadoop/JMYAndy/Data/Flight/test_vector/flight_FDs4.txt","/home/hadoop/JMYAndy/Data/Flight/test_vector/flight_FDs_weight4.txt",10,30,c);
-    }
+    }*/
     /*cout<<"--------------------test_data--------------------"<<endl;
     char rel_tuple_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight6.csv";
     char rel_tuple_weight_path[]="/Users/andy/Documents/Data/test/testsoftgreedy/flight6weight.txt";
@@ -1305,6 +1618,8 @@ int main(int argc, const char * argv[]) {
     
     
     
+    /*soft_repair("/home/hadoop/JMYAndy/Data/Flight/test_graph/1000jmy_graph0.050000.csv","/home/hadoop/JMYAndy/Data/Flight/test_graph/1000jmy_graph0.050000weight.txt","/home/hadoop/JMYAndy/Data/Flight/test_graph/flight_FDs.txt","/home/hadoop/JMYAndy/Data/Flight/test_graph/flight_FDs_weight.txt","/home/hadoop/JMYAndy/Data/Flight/test_graph/result_graph.csv","/home/hadoop/JMYAndy/Data/Flight/test_graph/result_graph_lp.csv");*/
+    
     /*cout<<"--------------------pollute_data--------------------"<<endl;
     char rel_tuple_path[]="/Users/andy/Documents/Data/Flight/flight50kjmy.csv";
     char rel_tuple_weight_path[]="";
@@ -1313,7 +1628,7 @@ int main(int argc, const char * argv[]) {
     soft_repair(rel_tuple_path,rel_tuple_weight_path,rel_fd_path,rel_fd_weight_path,"","");
     cout<<"--------------------pollute_data--------------------"<<endl;*/
     
-    
+    test_pollte_data_on_hadooop("/Users/andy/Documents/Data/Flight/flight50kjmy.csv","/Users/andy/Documents/Data/Flight/flight_FDs.txt","/Users/andy/Documents/Data/Flight/");
     
     return 0;
 }
