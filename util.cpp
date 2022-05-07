@@ -474,8 +474,11 @@ void Generator::construct_conflict(vector<Tuple> &tuple,vector<Relationship> &re
     unordered_map<pair<int,int>,int> visited;//标记两个元组是否为第一次冲突
     int con_id=(int)relationship.size();
     for(int p=0;p<fun_denp.size();++p){
+        //cout<<"第fp="<<p<<"层FD";
         for (int i = 0; i<tuple.size(); i++){
+            //cout<<"第i="<<i<<"层循环";
             for (int j = i + 1; j<tuple.size(); j++){
+                //cout<<"第j="<<j<<"层循环"<<endl;
                 int lhs_equal=0;
                 int rhs_equal=0;
                 int time_ovlp=0;
@@ -547,6 +550,7 @@ void Generator::construct_conflict(vector<Tuple> &tuple,vector<Relationship> &re
                         }
                         else if(!strcmp(con_type, "r")){
                             //如果是relational data
+                            
                             int element_id=(int)U.size();
                             Element temp_ele(tuple[i],tuple[j],fun_denp[p]);
                             temp_ele.ele_id=element_id;
@@ -583,6 +587,7 @@ void Generator::construct_conflict(vector<Tuple> &tuple,vector<Relationship> &re
             }
         }
     }
+    
     for(int i=0;i<relationship.size();++i){
         if(relationship[i].rel_type==1){
             relationship[i].rel_weight=for_weight[make_pair(relationship[i].rel.first.tuple_id, relationship[i].rel.second.tuple_id)];
@@ -2709,7 +2714,7 @@ void Generator::pollute_flight_graph(vector<Tuple> &tuple,int size,double err_ra
 /*--------------------以上pollute数据----------------*/
 
 /*--------------------以下pollute数据----------------*/
-void Generator::pollute_flight_on_hadoop(vector<Tuple> &tuple,int size,double err_rate,string result_path,int nums_FD,int p){
+void Generator::pollute_flight_on_hadoop(vector<Tuple> &tuple,int size,double err_rate,int nums_FD,int p){
     //FILE *fp;
     //FILE *fp_weight;
     size_t nums=attrs_name.size();
@@ -2718,8 +2723,8 @@ void Generator::pollute_flight_on_hadoop(vector<Tuple> &tuple,int size,double er
     string jmy="jmy_pollute_on_hadoop";
     string middle=to_string(size);
     string back=to_string(err_rate);
-    string result_tuple_path=result_path+middle+jmy+back+postfix;
-    string result_weight_path=result_path+middle+jmy+back+"weight"+weight_postfix;
+    //string result_tuple_path=result_path+middle+jmy+back+postfix;
+    //string result_weight_path=result_path+middle+jmy+back+"weight"+weight_postfix;
     
     //fp = fopen(result_tuple_path.data(), "w");
     //fp_weight = fopen(result_weight_path.data(), "w");
@@ -2782,7 +2787,9 @@ void Generator::pollute_flight_on_hadoop(vector<Tuple> &tuple,int size,double er
     int start_date=20210100;
     char str[9];
     sprintf(str,"%d",start_date);
+    //cout<<"shizhelima"<<endl;
     tuple.clear();//很重要!!!!!!
+    //cout<<"shizhelimadhdhdh"<<endl;
     //vector<vector<string> > normal_tuple;
     for(int i=0;i<size;i++){
         Tuple temp_tuple;
@@ -3372,5 +3379,4 @@ void Generator::pollute_flight_on_hadoop(vector<Tuple> &tuple,int size,double er
     //fclose(fp_weight);
 }
 /*--------------------以上pollute数据----------------*/
-
 
