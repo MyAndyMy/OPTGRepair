@@ -226,12 +226,15 @@ public:
     void pollute_flight(vector<Tuple> &tuple,int size,double err_rate,string result_tuple_path,int nums_FD);
     void pollute_flight_graph(vector<Tuple> &tuple,int size,double err_rate,string result_tuple_path,int nums_FD);
     void pollute_flight_on_hadoop(vector<Tuple> &tuple,int size,double err_rate,int nums_FD,int p);//这个函数之后，gen.souce_tuple里就是新的pollute数据了！
+    void pollute_flight_forinvalidvc(vector<Tuple> &tuple,string result_tuple_path);
+    void pollute_flight_forinvalidvc0510(vector<Tuple> &tuple,string result_tuple_path,int size,int err_size);
     void write_soft_result(char* soft_repair_result_path);
-    //void random_tuple_weight(int size,double err_rate);
     vector<vector<int> > lp_sc(vector<int> X, vector<vector<int> > F);
     vector<double> lp_solver_sc(vector<int> X, vector<vector<int> > F);
     int get_f(vector<int> X, vector<vector<int> > F);
     void write_soft_result_lp(char* soft_repair_result_path);
+    
+    void generate_a_conflict(Tuple &t1,Tuple &t2,FD &fd);
 };
 
 #endif /* util_hpp */
